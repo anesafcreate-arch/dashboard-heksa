@@ -1,0 +1,177 @@
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: calc(var(--z-sidebar) - 1);
+}
+
+.sidebar-overlay.active {
+  display: block;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  /* Orizon-like gradient sidebar */
+  background:
+    linear-gradient(180deg, #0c1529 0%, #050c1a 100%);
+  border-right: 1px solid rgba(59, 130, 246, 0.08);
+  display: flex;
+  flex-direction: column;
+  z-index: var(--z-sidebar);
+  transition: transform var(--transition-normal);
+  /* Subtle inner glow on the right edge */
+  box-shadow: inset -1px 0 20px rgba(59, 130, 246, 0.03);
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-lg);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.06);
+}
+
+.sidebar-logo img {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.15));
+}
+
+.sidebar-logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo-text span:first-child {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.sidebar-logo-text span:last-child {
+  font-size: 0.65rem;
+  color: var(--color-brand-light);
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: var(--space-lg) var(--space-md);
+  overflow-y: auto;
+}
+
+.sidebar-section-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+}
+
+/* Nav Item — Orizon Pill */
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 12px var(--space-md);
+  margin: 4px 0;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  position: relative;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.sidebar-nav-item:hover {
+  color: var(--color-text-primary);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+/* ACTIVE — Gradient Pill (Orizon "Home" style) */
+.sidebar-nav-item.active {
+  background: linear-gradient(135deg,
+    rgba(30, 64, 175, 0.4) 0%,
+    rgba(59, 130, 246, 0.2) 50%,
+    rgba(96, 165, 250, 0.15) 100%
+  );
+  color: white;
+  font-weight: 600;
+  border-color: rgba(59, 130, 246, 0.2);
+  box-shadow:
+    0 0 20px rgba(59, 130, 246, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav-item.active .sidebar-nav-icon {
+  color: var(--color-brand-light);
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));
+}
+
+.sidebar-nav-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-footer {
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid rgba(59, 130, 246, 0.06);
+}
+
+.sidebar-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 11px var(--space-md);
+  margin-top: var(--space-sm);
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-danger);
+  border-color: rgba(239, 68, 68, 0.12);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+}
