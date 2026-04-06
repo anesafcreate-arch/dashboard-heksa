@@ -74,7 +74,7 @@ export default function LoginPage() {
 
         <div className="login-footer">
           <span className="login-footer-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Award size={14} /> ISO/IEC 17025 — 2017
+            <Award size={14} /> LKN-264-IDN
           </span>
           <div className="login-demo-info">
             *Gunakan kredensial yang telah diberikan
