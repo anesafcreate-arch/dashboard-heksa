@@ -8,12 +8,15 @@ import AlatKeluarIcon from '../components/ui/AlatKeluarIcon';
 import { STATUS_KALIBRASI } from '../data/mockData';
 import './PageStyles.css';
 
-export default function BarangKeluarPage() {
+export default function AlatKeluarPage() {
   const { user } = useAuth();
-  const { barangKeluar, updateStatus } = useData();
-  const isAdmin = user?.role === 'admin';
-  const isTeknisi = user?.role === 'teknisi';
-  const canEdit = isAdministrasi || isTeknisi;
+  const { alatKeluar, updateStatus } = useData();
+  
+  // FIX: Samakan dengan role di Supabase & beresin nama variabel
+  const isAdministrasi = user?.role === 'Administrasi';
+  const isTeknisi = user?.role === 'Teknisi';
+  const isDirektur = user?.role === 'Direktur';
+  const canEdit = isAdministrasi || isTeknisi || isDirektur;
 
   const [statusConfirm, setStatusConfirm] = useState(null);
 
@@ -45,8 +48,8 @@ export default function BarangKeluarPage() {
   };
 
   const columns = [
-    { header: 'Kode Alat', accessor: 'kodeBarang' },
-    { header: 'Nama Alat', accessor: 'namaBarang' },
+    { header: 'Kode Alat', accessor: 'kodeAlat' },
+    { header: 'Nama Alat', accessor: 'namaAlat' },
     {
       header: 'Jenis Layanan',
       accessor: 'jenisLayanan',
@@ -101,7 +104,7 @@ export default function BarangKeluarPage() {
 
       <DataTable
         columns={columns}
-        data={barangKeluar}
+        data={alatKeluar}
         searchPlaceholder="Cari kode, nama, atau jenis layanan..."
         emptyIcon={<AlatKeluarIcon size={32} color="var(--color-text-muted)" />}
         emptyText="Belum ada alat keluar"
@@ -112,14 +115,7 @@ export default function BarangKeluarPage() {
         onClose={() => setStatusConfirm(null)}
         onConfirm={confirmStatusChange}
         title="Ubah Status Kalibrasi"
-        message={`Ubah status "${statusConfirm?.item?.namaBarang}" menjadi "${getStatusLabel(statusConfirm?.newStatus)}"?`}
-        confirmText="Ya, Ubah Status"
-        variant="primary"
-        isOpen={!!statusConfirm}
-        onClose={() => setStatusConfirm(null)}
-        onConfirm={confirmStatusChange}
-        title="Ubah Status Kalibrasi"
-        message={`Ubah status "${statusConfirm?.item?.namaBarang}" menjadi "${getStatusLabel(statusConfirm?.newStatus)}"?`}
+        message={`Ubah status "${statusConfirm?.item?.namaAlat}" menjadi "${getStatusLabel(statusConfirm?.newStatus)}"?`}
         confirmText="Ya, Ubah Status"
         variant="primary"
       />

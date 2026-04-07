@@ -113,8 +113,8 @@ export default function DashboardPage() {
       activities.push({
         id: `masuk-${item.id}`,
         type: 'masuk',
-        name: item.namaBarang,
-        kode: item.kodeBarang,
+        name: item.namaAlat,
+        kode: item.kodeAlat,
         date: item.tanggalMasuk,
         status: 'MASUK',
         jenisLayanan: item.jenisLayanan,
@@ -127,8 +127,8 @@ export default function DashboardPage() {
         activities.push({
           id: `keluar-${item.id}`,
           type: 'keluar',
-          name: item.namaBarang,
-          kode: item.kodeBarang,
+          name: item.namaAlat,
+          kode: item.kodeAlat,
           date: item.tanggalDiambil,
           status: 'KELUAR',
           jenisLayanan: item.jenisLayanan,
@@ -144,7 +144,7 @@ export default function DashboardPage() {
       return activities.filter((a) => a.type === 'keluar').slice(0, 8);
     }
     return activities.slice(0, 8);
-  }, [barangMasuk, barangKeluar, activityFilter]);
+  }, [alatMasuk, alatKeluar, activityFilter]);
 
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return '-';

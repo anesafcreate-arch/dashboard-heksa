@@ -7,119 +7,66 @@ import {
 
 const DataContext = createContext(null);
 
+// 1. Initial State - Pakai nama 'alat' biar sinkron semua
 const initialState = {
-  barangMasuk: INITIAL_BARANG_MASUK,
-  barangKeluar: INITIAL_BARANG_KELUAR,
+  alatMasuk: INITIAL_BARANG_MASUK,
+  alatKeluar: INITIAL_BARANG_KELUAR,
   databaseKalibrasi: DATABASE_KALIBRASI,
-  nextId: 13,
-  nextDbId: 11,
+  nextId: 100, // Mulai dari ID tinggi agar tidak bentrok
 };
 
 function dataReducer(state, action) {
   switch (action.type) {
-    case 'ADD_BARANG_MASUK': {
+    case 'ADD_ALAT_MASUK': {
       const newItem = { ...action.payload, id: state.nextId };
-      const newBarangKeluar = {
+      
+      // Tambahkan juga ke daftar alat keluar dengan status awal
+      const newAlatKeluar = {
         ...newItem,
         statusKalibrasi: 'MENUNGGU',
         sudahDiambil: false,
         tanggalDiambil: null,
       };
-      // Map barangMasuk fields to databaseKalibrasi fields
-      const newDb = {
-        id: state.nextDbId,
-        kodeAlat: action.payload.kodeBarang,
-        namaAlat: action.payload.namaBarang,
-        kategori: action.payload.jenisLayanan,
-      };
+
       return {
         ...state,
-        barangMasuk: [newItem, ...state.barangMasuk],
-        barangKeluar: [newBarangKeluar, ...state.barangKeluar],
-        databaseKalibrasi: [newDb, ...state.databaseKalibrasi],
+        alatMasuk: [newItem, ...state.alatMasuk],
+        alatKeluar: [newAlatKeluar, ...state.alatKeluar],
         nextId: state.nextId + 1,
-        nextDbId: state.nextDbId + 1,
       };
     }
-    case 'EDIT_BARANG_MASUK': {
-      const updated = action.payload;
-      return {
-        ...state,
-        barangMasuk: state.barangMasuk.map((item) =>
-          item.id === updated.id ? { ...item, ...updated } : item
-        ),
-        barangKeluar: state.barangKeluar.map((item) =>
-          item.id === updated.id
-            ? { ...item, kodeBarang: updated.kodeBarang, namaBarang: updated.namaBarang, jenisLayanan: updated.jenisLayanan }
-            : item
-        ),
-      };
-    }
-    case 'DELETE_BARANG_MASUK':
-      return {
-        ...state,
-        barangMasuk: state.barangMasuk.filter((item) => item.id !== action.payload),
-        barangKeluar: state.barangKeluar.filter((item) => item.id !== action.payload),
-      };
-    case 'TOGGLE_DIAMBIL': {
-      const id = action.payload;
-      return {
-        ...state,
-        barangKeluar: state.barangKeluar.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                sudahDiambil: !item.sudahDiambil,
-                statusKalibrasi: !item.sudahDiambil ? 'DIAMBIL' : 'SELESAI',
-                tanggalDiambil: !item.sudahDiambil
-                  ? new Date().toISOString().split('T')[0]
-                  : null,
-              }
-            : item
-        ),
-      };
-    }
-    // Milestone Status Update
+
     case 'UPDATE_STATUS': {
       const { id, status } = action.payload;
       return {
         ...state,
-        barangKeluar: state.barangKeluar.map((item) =>
+        alatKeluar: state.alatKeluar.map((item) =>
           item.id === id
             ? {
                 ...item,
                 statusKalibrasi: status,
                 sudahDiambil: status === 'DIAMBIL',
-                tanggalDiambil: status === 'DIAMBIL'
-                  ? new Date().toISOString().split('T')[0]
-                  : item.tanggalDiambil,
+                tanggalDiambil: status === 'DIAMBIL' ? new Date().toISOString().split('T')[0] : item.tanggalDiambil,
               }
             : item
         ),
       };
     }
-    case 'ADD_DATABASE': {
-      const newDb = { ...action.payload, id: state.nextDbId };
+
+    case 'DELETE_ALAT_MASUK':
       return {
         ...state,
-        databaseKalibrasi: [newDb, ...state.databaseKalibrasi],
-        nextDbId: state.nextDbId + 1,
+        alatMasuk: state.alatMasuk.filter((item) => item.id !== action.payload),
+        alatKeluar: state.alatKeluar.filter((item) => item.id !== action.payload),
       };
-    }
-    case 'EDIT_DATABASE':
+
+    // Case untuk Database Kalibrasi
+    case 'ADD_DATABASE':
       return {
         ...state,
-        databaseKalibrasi: state.databaseKalibrasi.map((item) =>
-          item.id === action.payload.id ? { ...item, ...action.payload } : item
-        ),
+        databaseKalibrasi: [{ ...action.payload, id: Date.now() }, ...state.databaseKalibrasi],
       };
-    case 'DELETE_DATABASE':
-      return {
-        ...state,
-        databaseKalibrasi: state.databaseKalibrasi.filter(
-          (item) => item.id !== action.payload
-        ),
-      };
+
     default:
       return state;
   }
@@ -128,50 +75,31 @@ function dataReducer(state, action) {
 export function DataProvider({ children }) {
   const [state, dispatch] = useReducer(dataReducer, initialState);
 
-  const addBarangMasuk = useCallback((item) => {
-    dispatch({ type: 'ADD_BARANG_MASUK', payload: item });
-  }, []);
-
-  const editBarangMasuk = useCallback((item) => {
-    dispatch({ type: 'EDIT_BARANG_MASUK', payload: item });
-  }, []);
-
-  const deleteBarangMasuk = useCallback((id) => {
-    dispatch({ type: 'DELETE_BARANG_MASUK', payload: id });
-  }, []);
-
-  const toggleDiambil = useCallback((id) => {
-    dispatch({ type: 'TOGGLE_DIAMBIL', payload: id });
+  // Bungkus fungsi dengan useCallback agar tidak bikin re-render terus
+  const addAlatMasuk = useCallback((item) => {
+    dispatch({ type: 'ADD_ALAT_MASUK', payload: item });
   }, []);
 
   const updateStatus = useCallback((id, status) => {
     dispatch({ type: 'UPDATE_STATUS', payload: { id, status } });
   }, []);
 
+  const deleteAlatMasuk = useCallback((id) => {
+    dispatch({ type: 'DELETE_ALAT_MASUK', payload: id });
+  }, []);
+
   const addDatabase = useCallback((item) => {
     dispatch({ type: 'ADD_DATABASE', payload: item });
-  }, []);
-
-  const editDatabase = useCallback((item) => {
-    dispatch({ type: 'EDIT_DATABASE', payload: item });
-  }, []);
-
-  const deleteDatabase = useCallback((id) => {
-    dispatch({ type: 'DELETE_DATABASE', payload: id });
   }, []);
 
   return (
     <DataContext.Provider
       value={{
         ...state,
-        addBarangMasuk,
-        editBarangMasuk,
-        deleteBarangMasuk,
-        toggleDiambil,
+        addAlatMasuk,
         updateStatus,
+        deleteAlatMasuk,
         addDatabase,
-        editDatabase,
-        deleteDatabase,
       }}
     >
       {children}
@@ -181,9 +109,7 @@ export function DataProvider({ children }) {
 
 export function useData() {
   const context = useContext(DataContext);
-  if (!context) {
-    throw new Error('useData must be used within DataProvider');
-  }
+  if (!context) throw new Error('useData must be used within DataProvider');
   return context;
 }
 

@@ -7,20 +7,20 @@ import './Sidebar.css';
 const MENU_ITEMS = {
   admin: [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/barang-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
-    { path: '/barang-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
+    { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
+    { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
     { path: '/database', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
   ],
   teknisi: [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/barang-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
-    { path: '/barang-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
+    { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
+    { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
   ],
   direktur: [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/barang-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
-    { path: '/barang-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
-    { path: '/database', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
+    { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
+    { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
+    { path: '/alat', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
     { path: '/settings', label: 'Pengaturan', icon: <Settings size={20} />, section: 'Pengaturan' },
   ],
 };

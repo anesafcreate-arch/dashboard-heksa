@@ -7,8 +7,8 @@ import AppLayout from './components/layout/AppLayout';
 import RoleGuard from './components/guards/RoleGuard';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import BarangMasukPage from './pages/BarangMasukPage';
-import BarangKeluarPage from './pages/BarangKeluarPage';
+import AlatMasukPage from './pages/AlatMasukPage';
+import AlatKeluarPage from './pages/AlatKeluarPage';
 import DatabasePage from './pages/DatabasePage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -29,8 +29,8 @@ function AppRoutes() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/barang-masuk" element={<BarangMasukPage />} />
-        <Route path="/barang-keluar" element={<BarangKeluarPage />} />
+        <Route path="/alat-masuk" element={<AlatMasukPage />} />
+        <Route path="/alat-keluar" element={<AlatKeluarPage />} />
         <Route
           path="/database"
           element={
