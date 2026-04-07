@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -22,7 +23,7 @@ function AppRoutes() {
       />
       <Route
         element={
-          <RoleGuard allowedRoles={['admin', 'teknisi', 'direktur']}>
+          <RoleGuard allowedRoles={['Administrasi', 'Teknisi', 'Direktur']}>
             <AppLayout />
           </RoleGuard>
         }
@@ -33,7 +34,7 @@ function AppRoutes() {
         <Route
           path="/database"
           element={
-            <RoleGuard allowedRoles={['admin', 'direktur']}>
+            <RoleGuard allowedRoles={['Administrasi', 'Direktur']}>
               <DatabasePage />
             </RoleGuard>
           }
@@ -41,7 +42,7 @@ function AppRoutes() {
         <Route
           path="/settings"
           element={
-            <RoleGuard allowedRoles={['direktur']}>
+            <RoleGuard allowedRoles={['Direktur']}>
               <SettingsPage />
             </RoleGuard>
           }

@@ -1,53 +1,7 @@
 import { createContext, useContext, useReducer, useCallback } from 'react';
-import { USERS } from '../data/mockData';
+import { supabase } from '../supabaseClient'; // PASTIKAN IMPORT INI ADA
 
 const AuthContext = createContext(null);
-
-// Helper to get stored profile photo from localStorage
-const getStoredProfilePhoto = (username) => {
-  try {
-    return localStorage.getItem(`profilePhoto_${username}`) || null;
-  } catch {
-    return null;
-  }
-};
-
-// Helper to save profile photo to localStorage
-const saveProfilePhoto = (username, photoUrl) => {
-  try {
-    if (photoUrl) {
-      // If it's already a data URL, save directly
-      if (photoUrl.startsWith('data:')) {
-        localStorage.setItem(`profilePhoto_${username}`, photoUrl);
-      } else if (photoUrl.startsWith('blob:')) {
-        // Convert blob URL to base64 for persistence
-        fetch(photoUrl)
-          .then((res) => res.blob())
-          .then((blob) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              localStorage.setItem(`profilePhoto_${username}`, reader.result);
-            };
-            reader.readAsDataURL(blob);
-          })
-          .catch(() => {});
-      }
-    } else {
-      localStorage.removeItem(`profilePhoto_${username}`);
-    }
-  } catch {
-    // localStorage unavailable
-  }
-};
-
-// Get users from localStorage (supports Settings page additions)
-const getUsers = () => {
-  try {
-    const stored = localStorage.getItem('app_users');
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return USERS;
-};
 
 const initialState = {
   user: null,
@@ -65,8 +19,6 @@ function authReducer(state, action) {
       return initialState;
     case 'CLEAR_ERROR':
       return { ...state, error: null };
-    case 'UPDATE_PROFILE_PHOTO':
-      return { ...state, user: { ...state.user, profilePhoto: action.payload } };
     default:
       return state;
   }
@@ -75,26 +27,44 @@ function authReducer(state, action) {
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  const login = useCallback((username, password) => {
-    // Check both default users and localStorage-stored users
-    const allUsers = getUsers();
-    const user = allUsers.find(
-      (u) => u.username === username && u.password === password
-    );
-    if (user) {
-      const storedPhoto = getStoredProfilePhoto(username);
-      dispatch({
-        type: 'LOGIN_SUCCESS',
-        payload: { ...user, password: undefined, profilePhoto: storedPhoto },
+  // UBAH JADI ASYNC SUPAYA BISA NGOMONG KE SUPABASE
+  const login = useCallback(async (email, password) => {
+    try {
+      // 1. Login ke Supabase Auth (Cek Email & Password)
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
+
+      if (authError) throw authError;
+
+      // 2. Ambil data Profile (Nama & Role) dari tabel yang kamu buat kemarin
+      const { data: profileData, error: profileError } = await supabase
+        .from('Profile') // Nama tabel di Supabase kamu
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // 3. Masukkan data user ke dalam State Aplikasi
+      const userPayload = {
+        id: authData.user.id,
+        email: authData.user.email,
+        nama_lengkap: profileData.nama_lengkap,
+        role: profileData.role, // Ini akan berisi: Direktur, Administrator, atau Teknisi
+      };
+
+      dispatch({ type: 'LOGIN_SUCCESS', payload: userPayload });
       return true;
-    } else {
-      dispatch({ type: 'LOGIN_FAILURE', payload: 'Username atau password salah!' });
+    } catch (err) {
+      dispatch({ type: 'LOGIN_FAILURE', payload: err.message });
       return false;
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     dispatch({ type: 'LOGOUT' });
   }, []);
 
@@ -102,15 +72,8 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 
-  const updateProfilePhoto = useCallback((photoUrl) => {
-    dispatch({ type: 'UPDATE_PROFILE_PHOTO', payload: photoUrl });
-    if (state.user?.username) {
-      saveProfilePhoto(state.user.username, photoUrl);
-    }
-  }, [state.user?.username]);
-
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, clearError, updateProfilePhoto }}>
+    <AuthContext.Provider value={{ ...state, login, logout, clearError }}>
       {children}
     </AuthContext.Provider>
   );

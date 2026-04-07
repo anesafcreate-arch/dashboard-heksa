@@ -11,9 +11,9 @@ import './PageStyles.css';
 export default function BarangKeluarPage() {
   const { user } = useAuth();
   const { barangKeluar, updateStatus } = useData();
-  const isAdmin = user?.role === 'admin';
-  const isTeknisi = user?.role === 'teknisi';
-  const canEdit = isAdmin || isTeknisi;
+  const isAdmin = user?.role === 'administrasi';
+  const isTeknisi = user?.role === 'teknisi';w
+  const canEdit = isAdministrasi || isTeknisi;
 
   const [statusConfirm, setStatusConfirm] = useState(null);
 
@@ -108,13 +108,6 @@ export default function BarangKeluarPage() {
       />
 
       <ConfirmDialog
-        isOpen={!!statusConfirm}
-        onClose={() => setStatusConfirm(null)}
-        onConfirm={confirmStatusChange}
-        title="Ubah Status Kalibrasi"
-        message={`Ubah status "${statusConfirm?.item?.namaBarang}" menjadi "${getStatusLabel(statusConfirm?.newStatus)}"?`}
-        confirmText="Ya, Ubah Status"
-        variant="primary"
         isOpen={!!statusConfirm}
         onClose={() => setStatusConfirm(null)}
         onConfirm={confirmStatusChange}
