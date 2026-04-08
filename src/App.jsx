@@ -23,7 +23,7 @@ function AppRoutes() {
       />
       <Route
         element={
-          <RoleGuard allowedRoles={['Admin', 'Teknisi', 'Direktur']}>
+          <RoleGuard allowedRoles={['admin', 'teknisi', 'direktur']}>
             <AppLayout />
           </RoleGuard>
         }
@@ -34,7 +34,7 @@ function AppRoutes() {
         <Route
           path="/database"
           element={
-            <RoleGuard allowedRoles={['Admin', 'Direktur']}>
+            <RoleGuard allowedRoles={['admin', 'direktur']}>
               <DatabasePage />
             </RoleGuard>
           }
@@ -42,7 +42,7 @@ function AppRoutes() {
         <Route
           path="/settings"
           element={
-            <RoleGuard allowedRoles={['Direktur']}>
+            <RoleGuard allowedRoles={['direktur']}>
               <SettingsPage />
             </RoleGuard>
           }
