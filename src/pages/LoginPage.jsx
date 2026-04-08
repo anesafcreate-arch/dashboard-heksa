@@ -7,16 +7,32 @@ import './LoginPage.css';
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { login, error, clearError } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     clearError();
+    
     if (!username || !password) return;
-    const success = login(username, password);
-    if (success) {
-      navigate('/dashboard', { replace: true });
+    
+    setIsLoggingIn(true);
+
+    const emailLogin = username.includes('@') 
+      ? username 
+      : `${username.toLowerCase()}@heksa.com`;
+
+    try {
+      const success = await login(emailLogin, password);
+      if (success) {
+        navigate('/dashboard', { replace: true });
+      }
+    } catch (err) {
+      console.error("Authentication Error:", err);
+    } finally {
+      setIsLoggingIn(true);
+      setTimeout(() => setIsLoggingIn(false), 1000);
     }
   };
 
@@ -25,7 +41,7 @@ export default function LoginPage() {
       <div className="login-bg" />
       <div className="login-card">
         <div className="login-logo">
-          <img src="/logo.png" alt="Logo PT. Heksa Instrumen Sinergi" />
+          <img src="/logo.png" alt="PT. Heksa Instrumen Sinergi" />
           <h1>Heksa Instrumen</h1>
           <p>SINERGI</p>
         </div>
@@ -41,10 +57,12 @@ export default function LoginPage() {
               <input
                 id="login-username"
                 type="text"
-                placeholder="Username"
+                placeholder="ID Pegawai (admin/teknisi/direktur)"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
+                disabled={isLoggingIn}
+                required
               />
             </div>
           </div>
@@ -59,25 +77,35 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                disabled={isLoggingIn}
+                required
               />
             </div>
           </div>
 
-
-
           {error && <div className="login-error">{error}</div>}
 
-          <button type="submit" className="login-btn" id="login-submit" style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-            <LogIn size={18} /> Masuk
+          <button 
+            type="submit" 
+            className="login-btn" 
+            disabled={isLoggingIn}
+          >
+            {isLoggingIn ? (
+              "Memproses..."
+            ) : (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <LogIn size={18} /> Masuk
+              </span>
+            )}
           </button>
         </form>
 
         <div className="login-footer">
-          <span className="login-footer-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span className="login-footer-badge">
             <Award size={14} /> LKN-264-IDN
           </span>
           <div className="login-demo-info">
-            *Gunakan kredensial yang telah diberikan
+            *Gunakan kredensial yang telah diberikan oleh IT
           </div>
         </div>
       </div>
