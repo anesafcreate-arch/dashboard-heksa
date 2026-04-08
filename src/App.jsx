@@ -34,7 +34,7 @@ function AppRoutes() {
         <Route
           path="/database"
           element={
-            <RoleGuard allowedRoles={['Administrasi', 'Direktur']}>
+            <RoleGuard allowedRoles={['Admin', 'Direktur']}>
               <DatabasePage />
             </RoleGuard>
           }
