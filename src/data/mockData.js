@@ -34,11 +34,11 @@ const daysAgo = (n) => {
   return d.toISOString().split('T')[0];
 };
 
-export const INITIAL_BARANG_MASUK = [
+export const INITIAL_ALAT_MASUK = [
   {
     id: 1,
-    kodeBarang: 'KB-2026-001',
-    namaBarang: 'Caliper Digital Mitutoyo',
+    kodeAlat: 'KB-2026-001',
+    namaAlat: 'Caliper Digital Mitutoyo',
     jenisLayanan: 'Dimensional Calibration',
     tanggalMasuk: daysAgo(0),
     dokumen: null,
@@ -46,8 +46,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 2,
-    kodeBarang: 'KB-2026-002',
-    namaBarang: 'Thermometer Infrared Fluke 62',
+    kodeAlat: 'KB-2026-002',
+    namaAlat: 'Thermometer Infrared Fluke 62',
     jenisLayanan: 'Temperature Calibration',
     tanggalMasuk: daysAgo(0),
     dokumen: null,
@@ -55,8 +55,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 3,
-    kodeBarang: 'KB-2026-003',
-    namaBarang: 'Pressure Gauge Ashcroft',
+    kodeAlat: 'KB-2026-003',
+    namaAlat: 'Pressure Gauge Ashcroft',
     jenisLayanan: 'Pressure Calibration',
     tanggalMasuk: daysAgo(1),
     dokumen: null,
@@ -64,8 +64,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 4,
-    kodeBarang: 'KB-2026-004',
-    namaBarang: 'Timbangan Analitik Mettler Toledo',
+    kodeAlat: 'KB-2026-004',
+    namaAlat: 'Timbangan Analitik Mettler Toledo',
     jenisLayanan: 'Weight and Balance Calibration',
     tanggalMasuk: daysAgo(1),
     dokumen: null,
@@ -73,8 +73,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 5,
-    kodeBarang: 'KB-2026-005',
-    namaBarang: 'Multimeter Digital Fluke 87V',
+    kodeAlat: 'KB-2026-005',
+    namaAlat: 'Multimeter Digital Fluke 87V',
     jenisLayanan: 'Electrical Calibration',
     tanggalMasuk: daysAgo(2),
     dokumen: null,
@@ -82,8 +82,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 6,
-    kodeBarang: 'KB-2026-006',
-    namaBarang: 'Force Gauge Shimpo FGV-50XY',
+    kodeAlat: 'KB-2026-006',
+    namaAlat: 'Force Gauge Shimpo FGV-50XY',
     jenisLayanan: 'Force Calibration',
     tanggalMasuk: daysAgo(2),
     dokumen: null,
@@ -91,8 +91,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 7,
-    kodeBarang: 'KB-2026-007',
-    namaBarang: 'pH Meter Hanna HI2020',
+    kodeAlat: 'KB-2026-007',
+    namaAlat: 'pH Meter Hanna HI2020',
     jenisLayanan: 'Analytical Instrument Calibration',
     tanggalMasuk: daysAgo(3),
     dokumen: null,
@@ -100,8 +100,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 8,
-    kodeBarang: 'KB-2026-008',
-    namaBarang: 'Mikrometer Mitutoyo 293-340',
+    kodeAlat: 'KB-2026-008',
+    namaAlat: 'Mikrometer Mitutoyo 293-340',
     jenisLayanan: 'Dimensional Calibration',
     tanggalMasuk: daysAgo(3),
     dokumen: null,
@@ -109,8 +109,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 9,
-    kodeBarang: 'KB-2026-009',
-    namaBarang: 'Pipet Volume Brand 10ml',
+    kodeAlat: 'KB-2026-009',
+    namaAlat: 'Pipet Volume Brand 10ml',
     jenisLayanan: 'Volumetric Calibration',
     tanggalMasuk: daysAgo(4),
     dokumen: null,
@@ -118,8 +118,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 10,
-    kodeBarang: 'KB-2026-010',
-    namaBarang: 'Torque Wrench Tohnichi',
+    kodeAlat: 'KB-2026-010',
+    namaAlat: 'Torque Wrench Tohnichi',
     jenisLayanan: 'Other Calibration',
     tanggalMasuk: daysAgo(5),
     dokumen: null,
@@ -127,8 +127,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 11,
-    kodeBarang: 'KB-2026-011',
-    namaBarang: 'Dial Indicator Peacock',
+    kodeAlat: 'KB-2026-011',
+    namaAlat: 'Dial Indicator Peacock',
     jenisLayanan: 'Dimensional Calibration',
     tanggalMasuk: daysAgo(5),
     dokumen: null,
@@ -136,8 +136,8 @@ export const INITIAL_BARANG_MASUK = [
   },
   {
     id: 12,
-    kodeBarang: 'KB-2026-012',
-    namaBarang: 'Thermocouple Type K Omega',
+    kodeAlat: 'KB-2026-012',
+    namaAlat: 'Thermocouple Type K Omega',
     jenisLayanan: 'Temperature Calibration',
     tanggalMasuk: daysAgo(6),
     dokumen: null,
@@ -145,8 +145,8 @@ export const INITIAL_BARANG_MASUK = [
   },
 ];
 
-// Barang Keluar now uses statusKalibrasi instead of simple sudahDiambil boolean
-export const INITIAL_BARANG_KELUAR = INITIAL_BARANG_MASUK.map((item) => ({
+// Alat Keluar now uses statusKalibrasi instead of simple sudahDiambil boolean
+export const INITIAL_ALAT_KELUAR = INITIAL_ALAT_MASUK.map((item) => ({
   ...item,
   statusKalibrasi: item.id <= 2 ? 'PROSES' : item.id <= 4 ? 'DIAMBIL' : item.id <= 6 ? 'SELESAI' : 'MENUNGGU',
   sudahDiambil: item.id <= 4 && item.id > 2,

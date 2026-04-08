@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useCallback } from 'react';
 import {
-  INITIAL_BARANG_MASUK,
-  INITIAL_BARANG_KELUAR,
+  INITIAL_ALAT_MASUK,
+  INITIAL_ALAT_KELUAR,
   DATABASE_KALIBRASI,
 } from '../data/mockData';
 
@@ -9,8 +9,8 @@ const DataContext = createContext(null);
 
 // 1. Initial State - Pakai nama 'alat' biar sinkron semua
 const initialState = {
-  alatMasuk: INITIAL_BARANG_MASUK,
-  alatKeluar: INITIAL_BARANG_KELUAR,
+  alatMasuk: INITIAL_ALAT_MASUK,
+  alatKeluar: INITIAL_ALAT_KELUAR,
   databaseKalibrasi: DATABASE_KALIBRASI,
   nextId: 100, // Mulai dari ID tinggi agar tidak bentrok
 };
