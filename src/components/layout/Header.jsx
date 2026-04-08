@@ -13,13 +13,23 @@ export default function Header({ onToggleSidebar }) {
   const profileRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const getInitials = (name) =>
-    name
+  // PENGAMAN getInitials
+  const getInitials = (name) => {
+    if (!name || typeof name !== 'string') return 'U';
+    return name
       .split(' ')
       .map((n) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  // PENGAMAN nama depan
+  const getFirstName = () => {
+     if(!user?.nama_lengkap && !user?.nama) return 'Pengguna';
+     const fullName = user?.nama_lengkap || user?.nama || 'Pengguna';
+     return fullName.split(' ')[0];
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -46,7 +56,6 @@ export default function Header({ onToggleSidebar }) {
     return `${Math.floor(diff / 86400)} hari lalu`;
   };
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -63,7 +72,6 @@ export default function Header({ onToggleSidebar }) {
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Convert to base64 data URL for persistence across logout/login
     const reader = new FileReader();
     reader.onloadend = () => {
       updateProfilePhoto(reader.result);
@@ -79,7 +87,7 @@ export default function Header({ onToggleSidebar }) {
           ☰
         </button>
         <div className="header-greeting">
-          {getGreeting()}, <strong>{user?.nama?.split(' ')[0]}</strong> 👋
+          {getGreeting()}, <strong>{getFirstName()}</strong> 👋
         </div>
       </div>
 
@@ -109,12 +117,12 @@ export default function Header({ onToggleSidebar }) {
                 )}
               </div>
               <div className="notification-list">
-                {notifications.length === 0 ? (
+                {(notifications || []).length === 0 ? (
                   <div className="notification-empty">
                     Belum ada notifikasi
                   </div>
                 ) : (
-                  notifications.map((notif) => (
+                  (notifications || []).map((notif) => (
                     <div
                       key={notif.id}
                       className={`notification-item ${!notif.read ? 'unread' : ''}`}
@@ -136,7 +144,6 @@ export default function Header({ onToggleSidebar }) {
           )}
         </div>
 
-        {/* Profile Photo with Dropdown */}
         <div className="profile-wrapper" ref={profileRef}>
           <button
             className="profile-trigger"
@@ -144,14 +151,14 @@ export default function Header({ onToggleSidebar }) {
           >
             <div className="profile-photo-container">
               {user?.profilePhoto ? (
-                <img src={user.profilePhoto} alt={user.nama} className="profile-photo" />
+                <img src={user.profilePhoto} alt={user?.nama_lengkap || user?.nama || 'Profil'} className="profile-photo" />
               ) : (
                 <div className="profile-photo-fallback">
-                  {getInitials(user?.nama || 'U')}
+                  {getInitials(user?.nama_lengkap || user?.nama)}
                 </div>
               )}
             </div>
-            <span className="profile-trigger-name">{user?.nama?.split(' ')[0]}</span>
+            <span className="profile-trigger-name">{getFirstName()}</span>
             <ChevronDown size={14} className={`profile-chevron ${showProfileMenu ? 'open' : ''}`} />
           </button>
 
@@ -160,16 +167,16 @@ export default function Header({ onToggleSidebar }) {
               <div className="profile-dropdown-header">
                 <div className="profile-dropdown-photo">
                   {user?.profilePhoto ? (
-                    <img src={user.profilePhoto} alt={user.nama} />
+                    <img src={user.profilePhoto} alt={user?.nama_lengkap || user?.nama || 'Profil'} />
                   ) : (
                     <div className="profile-photo-fallback large">
-                      {getInitials(user?.nama || 'U')}
+                      {getInitials(user?.nama_lengkap || user?.nama)}
                     </div>
                   )}
                 </div>
                 <div className="profile-dropdown-info">
-                  <div className="profile-dropdown-name">{user?.nama}</div>
-                  <div className="profile-dropdown-role">@{user?.username}</div>
+                  <div className="profile-dropdown-name">{user?.nama_lengkap || user?.nama || 'Pengguna'}</div>
+                  <div className="profile-dropdown-role">@{user?.role || 'user'}</div>
                 </div>
               </div>
               <div className="profile-dropdown-divider" />
