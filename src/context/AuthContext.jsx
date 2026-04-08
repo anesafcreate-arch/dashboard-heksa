@@ -1,24 +1,29 @@
-import { createContext, useContext, useReducer, useCallback } from 'react';
-import { supabase } from '../supabaseClient'; // PASTIKAN IMPORT INI ADA
+import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
+import { supabase } from '../supabaseClient'; 
 
 const AuthContext = createContext(null);
 
 const initialState = {
   user: null,
   isAuthenticated: false,
+  loading: true, // PENGAMAN 1: Tambahkan loading state
   error: null,
 };
 
 function authReducer(state, action) {
   switch (action.type) {
+    case 'INITIALIZE':
+      return { ...state, user: action.payload.user, isAuthenticated: !!action.payload.user, loading: false };
     case 'LOGIN_SUCCESS':
-      return { user: action.payload, isAuthenticated: true, error: null };
+      return { ...state, user: action.payload, isAuthenticated: true, error: null };
     case 'LOGIN_FAILURE':
-      return { ...state, error: action.payload };
+      return { ...state, error: action.payload, loading: false };
     case 'LOGOUT':
-      return initialState;
+      return { ...initialState, loading: false };
     case 'CLEAR_ERROR':
       return { ...state, error: null };
+    case 'UPDATE_PHOTO':
+      return { ...state, user: { ...state.user, profilePhoto: action.payload } };
     default:
       return state;
   }
@@ -27,32 +32,64 @@ function authReducer(state, action) {
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // UBAH JADI ASYNC SUPAYA BISA NGOMONG KE SUPABASE
+  // PENGAMAN 2: Cek sesi memori saat web pertama kali dibuka agar tidak logout otomatis
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          const { data: profileData } = await supabase
+            .from('Profile')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          const userPayload = {
+            id: session.user.id,
+            email: session.user.email,
+            nama_lengkap: profileData?.nama_lengkap,
+            role: profileData?.role,
+          };
+          dispatch({ type: 'INITIALIZE', payload: { user: userPayload } });
+        } else {
+          dispatch({ type: 'INITIALIZE', payload: { user: null } });
+        }
+      } catch (error) {
+        dispatch({ type: 'INITIALIZE', payload: { user: null } });
+      }
+    };
+
+    initializeAuth();
+
+    // Dengarkan perubahan jika user logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) dispatch({ type: 'LOGOUT' });
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const login = useCallback(async (email, password) => {
     try {
-      // 1. Login ke Supabase Auth (Cek Email & Password)
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-
       if (authError) throw authError;
 
-      // 2. Ambil data Profile (Nama & Role) dari tabel yang kamu buat kemarin
       const { data: profileData, error: profileError } = await supabase
-        .from('Profile') // Nama tabel di Supabase kamu
+        .from('Profile')
         .select('*')
         .eq('id', authData.user.id)
         .single();
-
       if (profileError) throw profileError;
 
-      // 3. Masukkan data user ke dalam State Aplikasi
       const userPayload = {
         id: authData.user.id,
         email: authData.user.email,
         nama_lengkap: profileData.nama_lengkap,
-        role: profileData.role, // Ini akan berisi: Direktur, Administrator, atau Teknisi
+        role: profileData.role, 
       };
 
       dispatch({ type: 'LOGIN_SUCCESS', payload: userPayload });
@@ -72,8 +109,13 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 
+  // PENGAMAN 3: Tambahkan fungsi dummy agar Header.jsx tidak crash
+  const updateProfilePhoto = useCallback((photoUrl) => {
+    dispatch({ type: 'UPDATE_PHOTO', payload: photoUrl });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, clearError }}>
+    <AuthContext.Provider value={{ ...state, login, logout, clearError, updateProfilePhoto }}>
       {children}
     </AuthContext.Provider>
   );
