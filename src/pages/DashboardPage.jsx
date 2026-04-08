@@ -21,7 +21,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { barangMasuk, barangKeluar } = useData();
+  const { alatMasuk, alatKeluar } = useData();
   const [activityFilter, setActivityFilter] = useState('all');
 
   // Track previous DIAMBIL count to detect changes
