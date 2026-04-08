@@ -26,27 +26,27 @@ export default function DashboardPage() {
 
   // Track previous DIAMBIL count to detect changes
   const prevDiambilCountRef = useRef(
-    barangKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL').length
+    alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL').length
   );
 
   // Auto-switch to "Keluar" tab when a new item becomes DIAMBIL
   useEffect(() => {
-    const currentDiambilCount = barangKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL').length;
+    const currentDiambilCount = alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL').length;
     if (currentDiambilCount > prevDiambilCountRef.current) {
       setActivityFilter('keluar');
     }
     prevDiambilCountRef.current = currentDiambilCount;
-  }, [barangKeluar]);
+  }, [alatKeluareluar]);
 
   const today = new Date().toISOString().split('T')[0];
 
   const stats = useMemo(() => {
-    const masukToday = barangMasuk.filter((b) => b.tanggalMasuk === today).length;
-    const keluarToday = barangKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL' && b.tanggalDiambil === today).length;
-    const proses = barangKeluar.filter((b) => b.statusKalibrasi === 'MENUNGGU' || b.statusKalibrasi === 'PROSES').length;
-    const selesai = barangKeluar.filter((b) => b.statusKalibrasi === 'SELESAI' || b.statusKalibrasi === 'DIAMBIL').length;
+    const masukToday = alatMasuk.filter((b) => b.tanggalMasuk === today).length;
+    const keluarToday = alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL' && b.tanggalDiambil === today).length;
+    const proses = alatKeluar.filter((b) => b.statusKalibrasi === 'MENUNGGU' || b.statusKalibrasi === 'PROSES').length;
+    const selesai = alatKeluar.filter((b) => b.statusKalibrasi === 'SELESAI' || b.statusKalibrasi === 'DIAMBIL').length;
     return { masukToday, keluarToday, proses, selesai };
-  }, [barangMasuk, barangKeluar, today]);
+  }, [alatMasuk, alatKeluar, today]);
 
   const chartData = {
     labels: CHART_DATA_7HARI.labels,
@@ -105,11 +105,11 @@ export default function DashboardPage() {
     },
   };
 
-  // Build a unified activity list from barangMasuk & barangKeluar
+  // Build a unified activity list from alatMasuk & alatKeluar
   const recentActivities = useMemo(() => {
     const activities = [];
 
-    barangMasuk.forEach((item) => {
+    alatMasuk.forEach((item) => {
       activities.push({
         id: `masuk-${item.id}`,
         type: 'masuk',
@@ -121,7 +121,7 @@ export default function DashboardPage() {
       });
     });
 
-    barangKeluar
+    alatKeluar
       .filter((item) => item.statusKalibrasi === 'DIAMBIL')
       .forEach((item) => {
         activities.push({
