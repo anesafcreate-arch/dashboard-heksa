@@ -23,7 +23,7 @@ function AppRoutes() {
       />
       <Route
         element={
-          <RoleGuard allowedRoles={['Administrasi', 'Teknisi', 'Direktur']}>
+          <RoleGuard allowedRoles={['Admin', 'Teknisi', 'Direktur']}>
             <AppLayout />
           </RoleGuard>
         }
