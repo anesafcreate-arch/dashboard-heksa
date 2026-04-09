@@ -1,12 +1,12 @@
 .app-layout {
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 
 .app-layout-content {
   margin-left: var(--sidebar-width);
   padding-top: var(--header-height);
-  min-height: 100vh;
+  min-height: 100dvh;
   transition: margin-left var(--transition-normal);
 }
 
@@ -23,6 +23,7 @@
     margin-left: 0;
   }
   .app-layout-main {
-    padding: var(--space-md);
+    padding: max(var(--space-md), env(safe-area-inset-top)) max(var(--space-md), env(safe-area-inset-right))
+      max(var(--space-md), env(safe-area-inset-bottom)) max(var(--space-md), env(safe-area-inset-left));
   }
 }

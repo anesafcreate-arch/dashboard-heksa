@@ -93,7 +93,7 @@ export default function AlatMasukPage() {
         dokumen: file ? URL.createObjectURL(file) : null,
         dokumenNama: file?.name || null,
       };
-      addAlatMasuk(newItem);
+      const inserted = await addAlatMasuk(newItem);
       addNotification(
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Package size={16} /> Alat baru masuk: {formData.namaAlat} — {formData.jenisLayanan}
@@ -106,6 +106,7 @@ export default function AlatMasukPage() {
           type: 'broadcast',
           event: 'alat_masuk',
           payload: {
+            id: inserted?.id,
             senderId: user?.id,
             kodeAlat: formData.kodeAlat,
             namaAlat: formData.namaAlat,

@@ -36,8 +36,49 @@ export function DataProvider({ children }) {
       })
       .subscribe();
 
-    const handleBroadcastSync = () => {
-      loadRows();
+    const handleBroadcastSync = (event) => {
+      const payload = event?.detail || null;
+
+      // Optimistic update agar Recent Activity user lain langsung muncul tanpa refresh.
+      if (payload?.id || payload?.kodeAlat) {
+        setRows((prev) => {
+          const nextRow = {
+            id: payload.id ?? `temp-${Date.now()}`,
+            kode_alat: payload.kodeAlat || '',
+            nama_alat: payload.namaAlat || '',
+            jenis_layanan: payload.jenisLayanan || '',
+            tanggal_masuk: payload.tanggalMasuk || new Date().toISOString().split('T')[0],
+            status_kalibrasi: payload.statusKalibrasi || 'MENUNGGU',
+            tanggal_diambil: payload.tanggalDiambil || null,
+            dokumen_nama: payload.dokumenNama || null,
+            created_at: new Date().toISOString(),
+          };
+
+          const idx = prev.findIndex((r) => Number(r.id) === Number(nextRow.id));
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...nextRow };
+            return copy;
+          }
+
+          // fallback match by code+date
+          const sigIdx = prev.findIndex(
+            (r) => r.kode_alat === nextRow.kode_alat && r.tanggal_masuk === nextRow.tanggal_masuk
+          );
+          if (sigIdx >= 0) {
+            const copy = [...prev];
+            copy[sigIdx] = { ...copy[sigIdx], ...nextRow };
+            return copy;
+          }
+
+          return [nextRow, ...prev];
+        });
+      }
+
+      // Re-sync dari DB untuk memastikan id/status final konsisten.
+      setTimeout(() => {
+        loadRows();
+      }, 500);
     };
     window.addEventListener('alat-masuk-broadcast', handleBroadcastSync);
 
@@ -73,15 +114,20 @@ export function DataProvider({ children }) {
   );
 
   const addAlatMasuk = useCallback(async (item) => {
-    await supabase.from('alat_kalibrasi').insert({
+    const { data } = await supabase
+      .from('alat_kalibrasi')
+      .insert({
       kode_alat: item.kodeAlat,
       nama_alat: item.namaAlat,
       jenis_layanan: item.jenisLayanan,
       tanggal_masuk: item.tanggalMasuk || new Date().toISOString().split('T')[0],
       dokumen_nama: item.dokumenNama || null,
       status_kalibrasi: 'MENUNGGU',
-    });
+      })
+      .select('id,kode_alat,nama_alat,jenis_layanan,tanggal_masuk,status_kalibrasi,tanggal_diambil,dokumen_nama')
+      .single();
     await loadRows();
+    return data ? normalizeRow(data) : null;
   }, [loadRows]);
 
   const editAlatMasuk = useCallback(async (item) => {
