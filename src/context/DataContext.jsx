@@ -36,18 +36,14 @@ export function DataProvider({ children }) {
       })
       .subscribe();
 
-    // Fallback realtime: saat admin broadcast input alat masuk,
-    // paksa reload agar Recent Activity user lain langsung update tanpa refresh.
-    const notifChannel = supabase
-      .channel('global-notif')
-      .on('broadcast', { event: 'alat_masuk' }, () => {
-        loadRows();
-      })
-      .subscribe();
+    const handleBroadcastSync = () => {
+      loadRows();
+    };
+    window.addEventListener('alat-masuk-broadcast', handleBroadcastSync);
 
     return () => {
       supabase.removeChannel(dbChannel);
-      supabase.removeChannel(notifChannel);
+      window.removeEventListener('alat-masuk-broadcast', handleBroadcastSync);
     };
   }, [loadRows]);
 

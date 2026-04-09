@@ -36,6 +36,7 @@ export default function AppLayout() {
         ({ payload }) => {
           // Hindari notifikasi ganda untuk pengirim (karena sudah dapat notif lokal)
           if (payload?.senderId && payload.senderId === user?.id) return;
+          window.dispatchEvent(new CustomEvent('alat-masuk-broadcast'));
           addNotification(
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               📥 Alat masuk baru: {payload?.namaAlat || '-'} ({payload?.kodeAlat || '-'})
