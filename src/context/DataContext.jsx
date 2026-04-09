@@ -29,15 +29,25 @@ export function DataProvider({ children }) {
   useEffect(() => {
     loadRows();
 
-    const channel = supabase
+    const dbChannel = supabase
       .channel('data-alat-kalibrasi')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alat_kalibrasi' }, () => {
         loadRows();
       })
       .subscribe();
 
+    // Fallback realtime: saat admin broadcast input alat masuk,
+    // paksa reload agar Recent Activity user lain langsung update tanpa refresh.
+    const notifChannel = supabase
+      .channel('global-notif')
+      .on('broadcast', { event: 'alat_masuk' }, () => {
+        loadRows();
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(dbChannel);
+      supabase.removeChannel(notifChannel);
     };
   }, [loadRows]);
 

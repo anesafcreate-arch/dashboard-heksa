@@ -11,7 +11,7 @@
 }
 
 .sidebar-overlay.active {
-  display: block;
+  display: none;
 }
 
 .sidebar {
@@ -168,6 +168,10 @@
 
 /* Mobile responsive */
 @media (max-width: 768px) {
+  .sidebar-overlay.active {
+    display: block;
+  }
+
   .sidebar {
     transform: translateX(-100%);
   }
