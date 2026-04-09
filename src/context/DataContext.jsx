@@ -1,173 +1,145 @@
-import { createContext, useContext, useReducer, useCallback } from 'react';
-import {
-  INITIAL_ALAT_MASUK,
-  INITIAL_ALAT_KELUAR,
-  DATABASE_KALIBRASI,
-} from '../data/mockData';
+import { createContext, useContext, useMemo, useState, useCallback, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
 const DataContext = createContext(null);
 
-const getNextId = (arr, fallback = 1) => {
-  const max = Array.isArray(arr) && arr.length ? Math.max(...arr.map((x) => Number(x?.id) || 0)) : 0;
-  return Math.max(max + 1, fallback);
-};
-
-// 1. Initial State
-const initialState = {
-  alatMasuk: INITIAL_ALAT_MASUK,
-  alatKeluar: INITIAL_ALAT_KELUAR,
-  databaseKalibrasi: DATABASE_KALIBRASI,
-  nextId: getNextId(INITIAL_ALAT_MASUK, 100), // Mulai tinggi agar tidak bentrok
-  nextDbId: getNextId(DATABASE_KALIBRASI, 100),
-};
-
-function dataReducer(state, action) {
-  switch (action.type) {
-    case 'ADD_ALAT_MASUK': {
-      const newItem = { ...action.payload, id: state.nextId };
-      const kodeAlat = newItem.kodeAlat || newItem.kodeBarang || '';
-      const namaAlat = newItem.namaAlat || newItem.namaBarang || '';
-      const jenisLayanan = newItem.jenisLayanan || newItem.kategori || '';
-      
-      // Tambahkan juga ke daftar alat keluar dengan status awal
-      const newAlatKeluar = {
-        ...newItem,
-        kodeAlat,
-        namaAlat,
-        jenisLayanan,
-        statusKalibrasi: 'MENUNGGU',
-        sudahDiambil: false,
-        tanggalDiambil: null,
-      };
-
-      return {
-        ...state,
-        alatMasuk: [newItem, ...state.alatMasuk],
-        alatKeluar: [newAlatKeluar, ...state.alatKeluar],
-        // Summary (database) otomatis dari input Alat Masuk
-        databaseKalibrasi: [
-          {
-            id: state.nextDbId,
-            kodeAlat,
-            namaAlat,
-            kategori: jenisLayanan,
-          },
-          ...state.databaseKalibrasi,
-        ],
-        nextId: state.nextId + 1,
-        nextDbId: state.nextDbId + 1,
-      };
-    }
-
-    case 'EDIT_ALAT_MASUK': {
-      const updated = action.payload;
-      return {
-        ...state,
-        alatMasuk: state.alatMasuk.map((item) =>
-          item.id === updated.id ? { ...item, ...updated } : item
-        ),
-        alatKeluar: state.alatKeluar.map((item) =>
-          item.id === updated.id
-            ? {
-                ...item,
-                kodeAlat: updated.kodeAlat,
-                namaAlat: updated.namaAlat,
-                jenisLayanan: updated.jenisLayanan,
-              }
-            : item
-        ),
-      };
-    }
-
-    case 'UPDATE_STATUS': {
-      const { id, status } = action.payload;
-      return {
-        ...state,
-        alatKeluar: state.alatKeluar.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                statusKalibrasi: status,
-                sudahDiambil: status === 'DIAMBIL',
-                tanggalDiambil: status === 'DIAMBIL' ? new Date().toISOString().split('T')[0] : item.tanggalDiambil,
-              }
-            : item
-        ),
-      };
-    }
-
-    case 'DELETE_ALAT_MASUK':
-      return {
-        ...state,
-        alatMasuk: state.alatMasuk.filter((item) => item.id !== action.payload),
-        alatKeluar: state.alatKeluar.filter((item) => item.id !== action.payload),
-      };
-
-    // Case untuk Database Kalibrasi (Summary)
-    case 'ADD_DATABASE': {
-      const newDb = { ...action.payload, id: state.nextDbId };
-      return {
-        ...state,
-        databaseKalibrasi: [newDb, ...state.databaseKalibrasi],
-        nextDbId: state.nextDbId + 1,
-      };
-    }
-
-    case 'EDIT_DATABASE':
-      return {
-        ...state,
-        databaseKalibrasi: state.databaseKalibrasi.map((item) =>
-          item.id === action.payload.id ? { ...item, ...action.payload } : item
-        ),
-      };
-
-    case 'DELETE_DATABASE':
-      return {
-        ...state,
-        databaseKalibrasi: state.databaseKalibrasi.filter((item) => item.id !== action.payload),
-      };
-
-    default:
-      return state;
-  }
-}
+const normalizeRow = (row) => ({
+  id: row.id,
+  kodeAlat: row.kode_alat || '',
+  namaAlat: row.nama_alat || '',
+  jenisLayanan: row.jenis_layanan || '',
+  tanggalMasuk: row.tanggal_masuk || null,
+  dokumenNama: row.dokumen_nama || null,
+  statusKalibrasi: row.status_kalibrasi || 'MENUNGGU',
+  tanggalDiambil: row.tanggal_diambil || null,
+});
 
 export function DataProvider({ children }) {
-  const [state, dispatch] = useReducer(dataReducer, initialState);
+  const [rows, setRows] = useState([]);
 
-  // Bungkus fungsi dengan useCallback agar tidak bikin re-render terus
-  const addAlatMasuk = useCallback((item) => {
-    dispatch({ type: 'ADD_ALAT_MASUK', payload: item });
+  const loadRows = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('alat_kalibrasi')
+      .select('*')
+      .order('tanggal_masuk', { ascending: false })
+      .order('created_at', { ascending: false });
+    if (!error) setRows(Array.isArray(data) ? data : []);
   }, []);
 
-  const editAlatMasuk = useCallback((item) => {
-    dispatch({ type: 'EDIT_ALAT_MASUK', payload: item });
-  }, []);
+  useEffect(() => {
+    loadRows();
 
-  const updateStatus = useCallback((id, status) => {
-    dispatch({ type: 'UPDATE_STATUS', payload: { id, status } });
-  }, []);
+    const channel = supabase
+      .channel('data-alat-kalibrasi')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alat_kalibrasi' }, () => {
+        loadRows();
+      })
+      .subscribe();
 
-  const deleteAlatMasuk = useCallback((id) => {
-    dispatch({ type: 'DELETE_ALAT_MASUK', payload: id });
-  }, []);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadRows]);
 
-  const addDatabase = useCallback((item) => {
-    dispatch({ type: 'ADD_DATABASE', payload: item });
-  }, []);
+  const alatMasuk = useMemo(() => rows.map(normalizeRow), [rows]);
 
-  const editDatabase = useCallback((item) => {
-    dispatch({ type: 'EDIT_DATABASE', payload: item });
-  }, []);
+  const alatKeluar = useMemo(
+    () =>
+      rows.map((row) => {
+        const item = normalizeRow(row);
+        return {
+          ...item,
+          sudahDiambil: item.statusKalibrasi === 'DIAMBIL',
+        };
+      }),
+    [rows]
+  );
 
-  const deleteDatabase = useCallback((id) => {
-    dispatch({ type: 'DELETE_DATABASE', payload: id });
-  }, []);
+  const databaseKalibrasi = useMemo(
+    () =>
+      rows.map((row) => ({
+        id: row.id,
+        kodeAlat: row.kode_alat || '',
+        namaAlat: row.nama_alat || '',
+        kategori: row.jenis_layanan || '',
+      })),
+    [rows]
+  );
+
+  const addAlatMasuk = useCallback(async (item) => {
+    await supabase.from('alat_kalibrasi').insert({
+      kode_alat: item.kodeAlat,
+      nama_alat: item.namaAlat,
+      jenis_layanan: item.jenisLayanan,
+      tanggal_masuk: item.tanggalMasuk || new Date().toISOString().split('T')[0],
+      dokumen_nama: item.dokumenNama || null,
+      status_kalibrasi: 'MENUNGGU',
+    });
+    await loadRows();
+  }, [loadRows]);
+
+  const editAlatMasuk = useCallback(async (item) => {
+    await supabase
+      .from('alat_kalibrasi')
+      .update({
+        kode_alat: item.kodeAlat,
+        nama_alat: item.namaAlat,
+        jenis_layanan: item.jenisLayanan,
+      })
+      .eq('id', item.id);
+    await loadRows();
+  }, [loadRows]);
+
+  const updateStatus = useCallback(async (id, status) => {
+    await supabase
+      .from('alat_kalibrasi')
+      .update({
+        status_kalibrasi: status,
+        tanggal_diambil: status === 'DIAMBIL' ? new Date().toISOString().split('T')[0] : null,
+      })
+      .eq('id', id);
+    await loadRows();
+  }, [loadRows]);
+
+  const deleteAlatMasuk = useCallback(async (id) => {
+    await supabase.from('alat_kalibrasi').delete().eq('id', id);
+    await loadRows();
+  }, [loadRows]);
+
+  const addDatabase = useCallback(async (item) => {
+    await supabase.from('alat_kalibrasi').insert({
+      kode_alat: item.kodeAlat,
+      nama_alat: item.namaAlat,
+      jenis_layanan: item.kategori,
+      tanggal_masuk: new Date().toISOString().split('T')[0],
+      status_kalibrasi: 'MENUNGGU',
+    });
+    await loadRows();
+  }, [loadRows]);
+
+  const editDatabase = useCallback(async (item) => {
+    await supabase
+      .from('alat_kalibrasi')
+      .update({
+        kode_alat: item.kodeAlat,
+        nama_alat: item.namaAlat,
+        jenis_layanan: item.kategori,
+      })
+      .eq('id', item.id);
+    await loadRows();
+  }, [loadRows]);
+
+  const deleteDatabase = useCallback(async (id) => {
+    await supabase.from('alat_kalibrasi').delete().eq('id', id);
+    await loadRows();
+  }, [loadRows]);
 
   return (
     <DataContext.Provider
       value={{
-        ...state,
+        alatMasuk,
+        alatKeluar,
+        databaseKalibrasi,
         addAlatMasuk,
         editAlatMasuk,
         updateStatus,
