@@ -20,22 +20,25 @@ const MENU_ITEMS = {
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
     { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
-    { path: '/alat', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
+    { path: '/database', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
     { path: '/settings', label: 'Pengaturan', icon: <Settings size={20} />, section: 'Pengaturan' },
   ],
 };
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const { user, logout } = useAuth();
-  const menuItems = MENU_ITEMS[user?.role] || [];
+  // Normalisasi role agar aman dari case/spasi (contoh: "Admin", "admin ", dll)
+  const roleKey = String(user?.role || '').toLowerCase().trim();
+  const menuItems = MENU_ITEMS[roleKey] || [];
 
   // Separate main menu from settings
   const mainItems = menuItems.filter((item) => !item.section);
   const settingsItems = menuItems.filter((item) => item.section);
 
   const getRoleLabel = (role) => {
+    const key = String(role || '').toLowerCase().trim();
     const labels = { admin: 'Administrasi', teknisi: 'Teknisi', direktur: 'Direktur' };
-    return labels[role] || role;
+    return labels[key] || role;
   };
 
   return (

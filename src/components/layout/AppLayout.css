@@ -1,5 +1,6 @@
 .app-layout {
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .app-layout-content {
@@ -12,6 +13,9 @@
 .app-layout-main {
   padding: var(--space-xl);
   max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  overflow: visible;
 }
 
 @media (max-width: 768px) {

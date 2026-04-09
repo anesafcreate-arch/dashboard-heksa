@@ -12,11 +12,9 @@ export default function AlatKeluarPage() {
   const { user } = useAuth();
   const { alatKeluar, updateStatus } = useData();
 
-  // --- FIX: Sesuaikan role dengan database (Huruf Besar) ---
-  const isAdministrasi = user?.role === 'Administrasi';
-  const isTeknisi = user?.role === 'Teknisi';
-  const isDirektur = user?.role === 'Direktur';
-  const canEdit = isAdministrasi || isTeknisi || isDirektur;
+  const roleKey = String(user?.role || '').toLowerCase().trim();
+  // Admin + Teknisi bisa update milestone; Direktur view-only
+  const canEdit = roleKey === 'admin' || roleKey === 'teknisi';
 
   const [statusConfirm, setStatusConfirm] = useState(null);
 

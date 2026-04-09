@@ -36,7 +36,7 @@ export default function DashboardPage() {
       setActivityFilter('keluar');
     }
     prevDiambilCountRef.current = currentDiambilCount;
-  }, [alatKeluareluar]);
+  }, [alatKeluar]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -107,9 +107,12 @@ export default function DashboardPage() {
 
   // Build a unified activity list from alatMasuk & alatKeluar
   const recentActivities = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const activities = [];
 
-    alatMasuk.forEach((item) => {
+    alatMasuk
+      .filter((item) => item.tanggalMasuk === todayStr)
+      .forEach((item) => {
       activities.push({
         id: `masuk-${item.id}`,
         type: 'masuk',
@@ -119,10 +122,10 @@ export default function DashboardPage() {
         status: 'MASUK',
         jenisLayanan: item.jenisLayanan,
       });
-    });
+      });
 
     alatKeluar
-      .filter((item) => item.statusKalibrasi === 'DIAMBIL')
+      .filter((item) => item.statusKalibrasi === 'DIAMBIL' && item.tanggalDiambil === todayStr)
       .forEach((item) => {
         activities.push({
           id: `keluar-${item.id}`,

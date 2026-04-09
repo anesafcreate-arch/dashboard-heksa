@@ -31,8 +31,7 @@ export default function LoginPage() {
     } catch (err) {
       console.error("Authentication Error:", err);
     } finally {
-      setIsLoggingIn(true);
-      setTimeout(() => setIsLoggingIn(false), 1000);
+      setTimeout(() => setIsLoggingIn(false), 300);
     }
   };
 

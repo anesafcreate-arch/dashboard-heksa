@@ -1,26 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Settings, UserPlus, Lock, Eye, EyeOff, Trash2, Shield, User, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 import './SettingsPage.css';
-
-// Get stored users from localStorage or use defaults
-const getStoredUsers = () => {
-  try {
-    const stored = localStorage.getItem('app_users');
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return [
-    { id: 1, username: 'admin', password: 'admin123', nama: 'Amel', role: 'admin' },
-    { id: 2, username: 'teknisi', password: 'teknisi123', nama: 'Budi Santoso', role: 'teknisi' },
-    { id: 3, username: 'direktur', password: 'direktur123', nama: 'Ir. Ahmad Hidayat', role: 'direktur' },
-  ];
-};
-
-const saveUsers = (users) => {
-  try {
-    localStorage.setItem('app_users', JSON.stringify(users));
-  } catch {}
-};
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -35,27 +17,19 @@ export default function SettingsPage() {
   const [pwMessage, setPwMessage] = useState(null);
 
   // User Management State
-  const [users, setUsers] = useState(getStoredUsers);
-  const [newUser, setNewUser] = useState({ username: '', password: '', nama: '', role: 'teknisi' });
-  const [addUserMsg, setAddUserMsg] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [profiles, setProfiles] = useState([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [profilesMsg, setProfilesMsg] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // id profile yang akan dinonaktifkan
 
-  useEffect(() => {
-    saveUsers(users);
-  }, [users]);
+  const roleKey = String(user?.role || '').toLowerCase().trim();
+  const canManageUsers = roleKey === 'direktur';
 
   // Handle Password Change
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = async (e) => {
     e.preventDefault();
     setPwMessage(null);
 
-    const storedUsers = getStoredUsers();
-    const currentUser = storedUsers.find((u) => u.username === user?.username);
-
-    if (!currentUser || currentUser.password !== currentPassword) {
-      setPwMessage({ type: 'error', text: 'Password saat ini salah!' });
-      return;
-    }
     if (newPassword.length < 6) {
       setPwMessage({ type: 'error', text: 'Password baru minimal 6 karakter!' });
       return;
@@ -65,52 +39,76 @@ export default function SettingsPage() {
       return;
     }
 
-    const updatedUsers = storedUsers.map((u) =>
-      u.username === user.username ? { ...u, password: newPassword } : u
-    );
-    setUsers(updatedUsers);
-    setPwMessage({ type: 'success', text: 'Password berhasil diubah!' });
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    try {
+      const email = user?.email;
+      if (!email) throw new Error('Email user tidak ditemukan.');
+
+      // Verifikasi password lama (reauth)
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+      if (reauthError) throw reauthError;
+
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+
+      setPwMessage({ type: 'success', text: 'Password berhasil diubah!' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPwMessage({ type: 'error', text: err?.message || 'Gagal mengubah password.' });
+    }
   };
 
-  // Handle Add User
-  const handleAddUser = (e) => {
-    e.preventDefault();
-    setAddUserMsg(null);
-
-    if (!newUser.username || !newUser.password || !newUser.nama) {
-      setAddUserMsg({ type: 'error', text: 'Semua field wajib diisi!' });
-      return;
+  const fetchProfiles = async () => {
+    if (!canManageUsers) return;
+    setProfilesLoading(true);
+    setProfilesMsg(null);
+    try {
+      const { data, error } = await supabase
+        .from('Profile')
+        .select('id,nama_lengkap,role')
+        .order('nama_lengkap', { ascending: true });
+      if (error) throw error;
+      setProfiles(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setProfilesMsg({ type: 'error', text: err?.message || 'Gagal memuat daftar user.' });
+    } finally {
+      setProfilesLoading(false);
     }
-    if (newUser.password.length < 6) {
-      setAddUserMsg({ type: 'error', text: 'Password minimal 6 karakter!' });
-      return;
-    }
-    if (users.some((u) => u.username === newUser.username)) {
-      setAddUserMsg({ type: 'error', text: 'Username sudah digunakan!' });
-      return;
-    }
-
-    const newId = Math.max(...users.map((u) => u.id)) + 1;
-    const updatedUsers = [...users, { ...newUser, id: newId }];
-    setUsers(updatedUsers);
-    setAddUserMsg({ type: 'success', text: `User "${newUser.nama}" berhasil ditambahkan!` });
-    setNewUser({ username: '', password: '', nama: '', role: 'teknisi' });
   };
 
-  // Handle Delete User
-  const handleDeleteUser = (userId) => {
-    if (userId === user?.id) return; // Can't delete self
-    setDeleteConfirm(userId);
+  useEffect(() => {
+    if (activeTab === 'users') fetchProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, canManageUsers]);
+
+  const updateProfile = async (id, patch) => {
+    if (!canManageUsers) return;
+    setProfilesMsg(null);
+    try {
+      const { error } = await supabase.from('Profile').update(patch).eq('id', id);
+      if (error) throw error;
+      await fetchProfiles();
+      setProfilesMsg({ type: 'success', text: 'Perubahan user tersimpan.' });
+    } catch (err) {
+      setProfilesMsg({ type: 'error', text: err?.message || 'Gagal menyimpan perubahan user.' });
+    }
   };
 
-  const confirmDelete = () => {
-    if (deleteConfirm) {
-      setUsers(users.filter((u) => u.id !== deleteConfirm));
-      setDeleteConfirm(null);
-    }
+  const requestDisableUser = (profileId) => {
+    // Untuk keamanan, hindari menonaktifkan diri sendiri
+    if (profileId === user?.id) return;
+    setDeleteConfirm(profileId);
+  };
+
+  const confirmDisable = async () => {
+    if (!deleteConfirm) return;
+    const id = deleteConfirm;
+    setDeleteConfirm(null);
+    await updateProfile(id, { role: 'disabled' });
   };
 
   const getRoleBadge = (role) => {
@@ -118,8 +116,9 @@ export default function SettingsPage() {
       admin: 'blue',
       teknisi: 'amber',
       direktur: 'green',
+      disabled: 'gray',
     };
-    return colors[role] || 'blue';
+    return colors[String(role || '').toLowerCase().trim()] || 'blue';
   };
 
   return (
@@ -230,76 +229,40 @@ export default function SettingsPage() {
         {/* === User Management === */}
         {activeTab === 'users' && (
           <div className="settings-users-grid animate-fade-in-up">
-            {/* Add New User */}
+            {/* Info / Add User */}
             <div className="settings-card">
               <div className="settings-card-header">
                 <div className="settings-card-icon green">
                   <UserPlus size={24} />
                 </div>
                 <div>
-                  <h2>Tambah User Baru</h2>
-                  <p>Buat akun login baru untuk staf</p>
+                  <h2>Manajemen User</h2>
+                  <p>Atur role dan akses user yang sudah terdaftar</p>
                 </div>
               </div>
 
-              <form onSubmit={handleAddUser} className="settings-form">
-                <div className="form-group">
-                  <label className="form-label">Nama Lengkap</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Contoh: Ahmad Santoso"
-                    value={newUser.nama}
-                    onChange={(e) => setNewUser({ ...newUser, nama: e.target.value })}
-                  />
+              {!canManageUsers ? (
+                <div className="settings-message error">
+                  <AlertCircle size={16} />
+                  Fitur ini hanya untuk role <strong>Direktur</strong>.
                 </div>
-
-                <div className="form-group">
-                  <label className="form-label">Username</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Contoh: ahmad_s"
-                    value={newUser.username}
-                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Password</label>
-                  <input
-                    type="password"
-                    className="form-input"
-                    placeholder="Minimal 6 karakter"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Role</label>
-                  <select
-                    className="form-select"
-                    value={newUser.role}
-                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="teknisi">Teknisi</option>
-                    <option value="direktur">Direktur</option>
-                  </select>
-                </div>
-
-                {addUserMsg && (
-                  <div className={`settings-message ${addUserMsg.type}`}>
-                    {addUserMsg.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-                    {addUserMsg.text}
+              ) : (
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                    Penambahan akun login baru perlu dibuat di <strong>Supabase Auth</strong> (demi keamanan).
+                    Setelah akun dibuat, role aksesnya diatur lewat daftar user di sebelah.
                   </div>
-                )}
-
-                <button type="submit" className="btn-primary">
-                  <UserPlus size={16} /> Tambah User
-                </button>
-              </form>
+                  <button className="btn-secondary" onClick={fetchProfiles} disabled={profilesLoading}>
+                    Muat Ulang Daftar User
+                  </button>
+                  {profilesMsg && (
+                    <div className={`settings-message ${profilesMsg.type}`}>
+                      {profilesMsg.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                      {profilesMsg.text}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* User List */}
@@ -310,28 +273,43 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2>Daftar User</h2>
-                  <p>{users.length} user terdaftar</p>
+                  <p>{profilesLoading ? 'Memuat…' : `${profiles.length} user terdaftar`}</p>
                 </div>
               </div>
 
               <div className="settings-user-list">
-                {users.map((u) => (
-                  <div key={u.id} className="settings-user-item">
+                {profiles.map((p) => (
+                  <div key={p.id} className="settings-user-item">
                     <div className="settings-user-avatar">
                       <User size={18} />
                     </div>
                     <div className="settings-user-info">
-                      <div className="settings-user-name">{u.nama}</div>
-                      <div className="settings-user-username">@{u.username}</div>
+                      <div className="settings-user-name">{p.nama_lengkap || '—'}</div>
+                      <div className="settings-user-username" style={{ fontSize: '0.78rem' }}>
+                        ID: {p.id}
+                      </div>
                     </div>
-                    <span className={`settings-role-badge ${getRoleBadge(u.role)}`}>
-                      {u.role}
+                    <span className={`settings-role-badge ${getRoleBadge(p.role)}`}>
+                      {String(p.role || '—')}
                     </span>
-                    {u.id !== user?.id && (
+                    {canManageUsers ? (
+                      <select
+                        className="form-select"
+                        value={String(p.role || '').toLowerCase().trim()}
+                        onChange={(e) => updateProfile(p.id, { role: e.target.value })}
+                        style={{ width: '160px' }}
+                      >
+                        <option value="admin">admin</option>
+                        <option value="teknisi">teknisi</option>
+                        <option value="direktur">direktur</option>
+                        <option value="disabled">disabled</option>
+                      </select>
+                    ) : null}
+                    {canManageUsers && p.id !== user?.id && (
                       <button
                         className="settings-delete-btn"
-                        onClick={() => handleDeleteUser(u.id)}
-                        title="Hapus User"
+                        onClick={() => requestDisableUser(p.id)}
+                        title="Nonaktifkan User"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -351,15 +329,15 @@ export default function SettingsPage() {
             <div className="confirm-dialog-body" style={{ padding: '32px' }}>
               <div className="confirm-dialog-icon">⚠️</div>
               <div className="confirm-dialog-message">
-                Apakah Anda yakin ingin menghapus user ini?
-                <br />Tindakan ini tidak dapat dibatalkan.
+                Nonaktifkan user ini?
+                <br />User tidak akan bisa masuk sampai role diaktifkan lagi.
               </div>
               <div className="confirm-dialog-actions">
                 <button className="btn-secondary" onClick={() => setDeleteConfirm(null)}>
                   Batal
                 </button>
-                <button className="btn-danger" onClick={confirmDelete}>
-                  <Trash2 size={16} /> Hapus User
+                <button className="btn-danger" onClick={confirmDisable}>
+                  <Trash2 size={16} /> Nonaktifkan
                 </button>
               </div>
             </div>

@@ -10,7 +10,7 @@ import './PageStyles.css';
 export default function DatabasePage() {
   const { user } = useAuth();
   const { databaseKalibrasi, addDatabase, editDatabase, deleteDatabase } = useData();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = String(user?.role || '').toLowerCase().trim() === 'admin';
 
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
