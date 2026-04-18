@@ -1,0 +1,331 @@
+.dashboard-page {
+  animation: fadeInUp 500ms ease forwards;
+}
+
+.dashboard-header {
+  margin-bottom: var(--space-xl);
+}
+
+.dashboard-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, #f1f5f9, #93c5fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dashboard-header p {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.dashboard-onsite-section {
+  margin-top: var(--space-lg);
+}
+
+.dashboard-onsite-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+}
+
+/* Chart Card — Gradient border effect */
+.dashboard-chart-card {
+  position: relative;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  overflow: hidden;
+}
+
+.dashboard-chart-card::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: -60px;
+  width: 150px;
+  height: 150px;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 50%;
+  filter: blur(50px);
+  pointer-events: none;
+}
+
+.dashboard-chart-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-text-primary);
+}
+
+.dashboard-chart-container {
+  position: relative;
+  height: 260px;
+}
+
+/* ========================================
+   Recent Activity Card — Premium Orizon
+   ======================================== */
+.dashboard-activity-card {
+  position: relative;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  max-height: 400px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Decorative corner gradient orb */
+.dashboard-activity-card::after {
+  content: '';
+  position: absolute;
+  bottom: -40px;
+  right: -40px;
+  width: 120px;
+  height: 120px;
+  background: rgba(34, 197, 94, 0.06);
+  border-radius: 50%;
+  filter: blur(50px);
+  pointer-events: none;
+}
+
+/* Card Header */
+.activity-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  flex-shrink: 0;
+}
+
+.activity-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* Filter Tabs — Orizon Pill Navigation */
+.activity-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(2, 8, 23, 0.6);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  border: 1px solid var(--color-border);
+}
+
+.activity-tab {
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: transparent;
+  border: none;
+  white-space: nowrap;
+}
+
+.activity-tab:hover {
+  color: var(--color-text-secondary);
+}
+
+.activity-tab.active {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Table Wrapper */
+.recent-activity-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* Table */
+.recent-activity-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.recent-activity-table thead tr {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.recent-activity-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.recent-activity-table tbody tr {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.04);
+  transition: background var(--transition-fast);
+}
+
+.recent-activity-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.recent-activity-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.recent-activity-table td {
+  padding: 14px 12px;
+  vertical-align: middle;
+}
+
+/* Account cell with glowing dot */
+.activity-account-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.activity-dot-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px currentColor;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.activity-account-name {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.activity-date-cell {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.activity-amount-cell {
+  color: var(--color-text-secondary);
+  font-family: 'Inter', monospace;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* Status Badge */
+.activity-status-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.activity-status-badge.masuk {
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.2), rgba(59, 130, 246, 0.12));
+  color: var(--color-brand-light);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.activity-status-badge.keluar {
+  background: linear-gradient(135deg, rgba(21, 128, 61, 0.2), rgba(34, 197, 94, 0.12));
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+/* More button */
+.activity-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+  background: none;
+}
+
+.activity-more-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+/* Empty State */
+.activity-empty-cell {
+  text-align: center;
+  padding: 32px !important;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dashboard-header h1 {
+    font-size: 1.2rem;
+  }
+  .activity-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .activity-account-name {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+}

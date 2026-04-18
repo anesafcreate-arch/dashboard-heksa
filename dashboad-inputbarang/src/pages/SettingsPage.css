@@ -1,0 +1,272 @@
+/* Settings Page — Orizon Premium */
+.settings-page {
+  max-width: 1000px;
+}
+
+/* Tabs */
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(10, 22, 40, 0.6);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  width: fit-content;
+  margin-bottom: var(--space-xl);
+}
+
+.settings-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: transparent;
+  border: none;
+  white-space: nowrap;
+}
+
+.settings-tab:hover {
+  color: var(--color-text-secondary);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.settings-tab.active {
+  background: linear-gradient(135deg, #1a4a8a, #3b82f6);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Settings Card */
+.settings-card {
+  background: rgba(10, 22, 40, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  animation: fadeInUp 400ms ease forwards;
+}
+
+.settings-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.settings-card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-card-icon.blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-brand-light);
+  box-shadow: 0 0 24px rgba(59, 130, 246, 0.15);
+}
+
+.settings-card-icon.green {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.15);
+}
+
+.settings-card-icon.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.15);
+}
+
+.settings-card-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.settings-card-header p {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+/* Form */
+.settings-form {
+  max-width: 420px;
+}
+
+.settings-input-wrapper {
+  position: relative;
+}
+
+.settings-input-wrapper .form-input {
+  padding-right: 42px;
+}
+
+.settings-eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-fast);
+}
+
+.settings-eye-btn:hover {
+  color: var(--color-text-primary);
+}
+
+/* Message */
+.settings-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 500;
+  animation: fadeInDown 300ms ease;
+}
+
+.settings-message.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+.settings-message.error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+/* Users Grid */
+.settings-users-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+/* User List */
+.settings-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-user-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.settings-user-item:hover {
+  background: rgba(59, 130, 246, 0.04);
+  border-color: var(--color-border);
+}
+
+.settings-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: rgba(59, 130, 246, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-brand-light);
+  flex-shrink: 0;
+}
+
+.settings-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-user-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.settings-user-username {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.settings-role-badge {
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.settings-role-badge.blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-brand-light);
+}
+
+.settings-role-badge.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+}
+
+.settings-role-badge.green {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.settings-delete-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: none;
+  border: none;
+  flex-shrink: 0;
+}
+
+.settings-delete-btn:hover {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+@media (max-width: 768px) {
+  .settings-users-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-tabs {
+    width: 100%;
+  }
+  .settings-tab {
+    flex: 1;
+    justify-content: center;
+  }
+}

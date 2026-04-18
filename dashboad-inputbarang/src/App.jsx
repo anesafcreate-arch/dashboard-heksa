@@ -1,0 +1,67 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { DataProvider } from './context/DataContext';
+import AppLayout from './components/layout/AppLayout';
+import RoleGuard from './components/guards/RoleGuard';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import BarangMasukPage from './pages/BarangMasukPage';
+import BarangKeluarPage from './pages/BarangKeluarPage';
+import DatabasePage from './pages/DatabasePage';
+import SettingsPage from './pages/SettingsPage';
+
+function AppRoutes() {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+      />
+      <Route
+        element={
+          <RoleGuard allowedRoles={['admin', 'teknisi', 'direktur', 'manager_dian', 'manager_fida', 'manager_uko']}>
+            <AppLayout />
+          </RoleGuard>
+        }
+      >
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/barang-masuk" element={<BarangMasukPage />} />
+        <Route path="/barang-keluar" element={<BarangKeluarPage />} />
+        <Route
+          path="/database"
+          element={
+            <RoleGuard allowedRoles={['admin', 'direktur']}>
+              <DatabasePage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <RoleGuard allowedRoles={['direktur', 'manager_dian', 'manager_fida']}>
+              <SettingsPage />
+            </RoleGuard>
+          }
+        />
+      </Route>
+      <Route path="*" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <NotificationProvider>
+          <DataProvider>
+            <AppRoutes />
+          </DataProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}

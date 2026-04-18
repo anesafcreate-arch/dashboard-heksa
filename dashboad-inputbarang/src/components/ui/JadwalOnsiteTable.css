@@ -1,0 +1,44 @@
+.onsite-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.onsite-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  gap: var(--space-sm);
+}
+
+.onsite-card-header h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 1rem;
+}
+
+.onsite-readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.onsite-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.onsite-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
