@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import AlatKeluarIcon from '../components/ui/AlatKeluarIcon';
 import { CHART_DATA_7HARI } from '../data/mockData';
+import { getRoleGroup, isManagerRole, normalizeRole } from '../utils/roles';
 import './DashboardPage.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -33,10 +34,11 @@ export default function DashboardPage() {
   const { alatMasuk, alatKeluar, jadwalOnsite } = useData();
   const [activityFilter, setActivityFilter] = useState('all');
 
-  const roleKey = String(user?.role || '').toLowerCase().trim();
+  const roleKey = normalizeRole(user?.role);
+  const roleGroup = getRoleGroup(roleKey);
   const nameKey = String(user?.nama_lengkap || user?.nama || '').toLowerCase().trim();
   const isManagerName = ['dian', 'fida', 'uko'].some((name) => nameKey.includes(name));
-  const canViewJadwalOnsite = ['direktur', 'manager', 'admin', 'teknisi'].includes(roleKey) || isManagerName;
+  const canViewJadwalOnsite = ['direktur', 'admin', 'teknisi'].includes(roleKey) || isManagerRole(roleKey) || isManagerName;
   const showKalibrasiChart = roleKey !== 'teknisi';
 
   const prevDiambilCountRef = useRef(
@@ -176,7 +178,7 @@ export default function DashboardPage() {
       direktur: 'Dashboard Eksekutif',
       manager: 'Dashboard Manager',
     };
-    return titles[roleKey] || 'Dashboard';
+    return titles[roleGroup] || 'Dashboard';
   };
 
   const statusColor = (type) => {

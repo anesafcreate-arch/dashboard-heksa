@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { isRoleAllowed, normalizeRole } from '../../utils/roles';
 
 export default function RoleGuard({ allowedRoles, children }) {
   const { user, isAuthenticated, loading } = useAuth();
@@ -17,13 +18,13 @@ export default function RoleGuard({ allowedRoles, children }) {
   }
 
   // PENGAMAN FINAL: toLowerCase() untuk samakan huruf, trim() untuk buang spasi gaib
-  const userRole = String(user?.role || '').toLowerCase().trim();
+  const userRole = normalizeRole(user?.role);
   const allowed = Array.isArray(allowedRoles) 
-    ? allowedRoles.map(r => String(r).toLowerCase().trim()) 
+    ? allowedRoles.map((r) => normalizeRole(r))
     : [];
 
   // Jika role tidak ada di daftar yang diizinkan
-  if (allowedRoles && !allowed.includes(userRole)) {
+  if (allowedRoles && !isRoleAllowed(userRole, allowedRoles)) {
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a', color: 'white' }}>
         <h2>Akses Ditolak 🛑</h2>

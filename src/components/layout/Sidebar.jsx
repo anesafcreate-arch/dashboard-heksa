@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Database, LogOut, Settings } from 'lucide-react';
 import AlatKeluarIcon from '../ui/AlatKeluarIcon';
 import { useAuth } from '../../context/AuthContext';
+import { getRoleGroup, normalizeRole } from '../../utils/roles';
 import './Sidebar.css';
 
 const MENU_ITEMS = {
@@ -33,8 +34,9 @@ const MENU_ITEMS = {
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const { user, logout } = useAuth();
   // Normalisasi role agar aman dari case/spasi (contoh: "Admin", "admin ", dll)
-  const roleKey = String(user?.role || '').toLowerCase().trim();
-  const menuItems = MENU_ITEMS[roleKey] || [];
+  const roleKey = normalizeRole(user?.role);
+  const roleGroup = getRoleGroup(roleKey);
+  const menuItems = MENU_ITEMS[roleGroup] || [];
 
   // Separate main menu from settings
   const mainItems = menuItems.filter((item) => !item.section);

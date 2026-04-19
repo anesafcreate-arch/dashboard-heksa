@@ -147,7 +147,10 @@ with check (
     select 1
     from public."Profile" p
     where p.id = auth.uid()
-      and lower(trim(p.role)) in ('admin', 'manager', 'direktur')
+      and (
+        lower(trim(p.role)) in ('admin', 'direktur')
+        or lower(trim(p.role)) like 'manager%'
+      )
   )
 );
 
@@ -161,7 +164,10 @@ using (
     select 1
     from public."Profile" p
     where p.id = auth.uid()
-      and lower(trim(p.role)) in ('admin', 'manager', 'direktur')
+      and (
+        lower(trim(p.role)) in ('admin', 'direktur')
+        or lower(trim(p.role)) like 'manager%'
+      )
   )
 )
 with check (
@@ -169,7 +175,10 @@ with check (
     select 1
     from public."Profile" p
     where p.id = auth.uid()
-      and lower(trim(p.role)) in ('admin', 'manager', 'direktur')
+      and (
+        lower(trim(p.role)) in ('admin', 'direktur')
+        or lower(trim(p.role)) like 'manager%'
+      )
   )
 );
 

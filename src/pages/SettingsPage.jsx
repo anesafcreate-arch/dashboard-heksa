@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Settings, UserPlus, Lock, Eye, EyeOff, Trash2, Shield, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { getRoleGroup, normalizeRole } from '../utils/roles';
 import './SettingsPage.css';
 
 export default function SettingsPage() {
@@ -22,7 +23,7 @@ export default function SettingsPage() {
   const [profilesMsg, setProfilesMsg] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // id profile yang akan dinonaktifkan
 
-  const roleKey = String(user?.role || '').toLowerCase().trim();
+  const roleKey = normalizeRole(user?.role);
   const canManageUsers = roleKey === 'direktur';
 
   // Handle Password Change
@@ -119,7 +120,7 @@ export default function SettingsPage() {
       manager: 'blue',
       disabled: 'gray',
     };
-    return colors[String(role || '').toLowerCase().trim()] || 'blue';
+    return colors[getRoleGroup(role)] || 'blue';
   };
 
   return (
@@ -296,12 +297,14 @@ export default function SettingsPage() {
                     {canManageUsers ? (
                       <select
                         className="form-select"
-                        value={String(p.role || '').toLowerCase().trim()}
+                        value={normalizeRole(p.role)}
                         onChange={(e) => updateProfile(p.id, { role: e.target.value })}
                         style={{ width: '160px' }}
                       >
                         <option value="admin">admin</option>
-                        <option value="manager">manager</option>
+                        <option value="managermutu">managermutu</option>
+                        <option value="managerkeuangan">managerkeuangan</option>
+                        <option value="managerpemasaran">managerpemasaran</option>
                         <option value="teknisi">teknisi</option>
                         <option value="direktur">direktur</option>
                         <option value="disabled">disabled</option>
