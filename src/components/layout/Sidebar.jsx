@@ -23,6 +23,11 @@ const MENU_ITEMS = {
     { path: '/database', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
     { path: '/settings', label: 'Pengaturan', icon: <Settings size={20} />, section: 'Pengaturan' },
   ],
+  manager: [
+    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
+    { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
+  ],
 };
 
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
@@ -34,12 +39,6 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   // Separate main menu from settings
   const mainItems = menuItems.filter((item) => !item.section);
   const settingsItems = menuItems.filter((item) => item.section);
-
-  const getRoleLabel = (role) => {
-    const key = String(role || '').toLowerCase().trim();
-    const labels = { admin: 'Administrasi', teknisi: 'Teknisi', direktur: 'Direktur' };
-    return labels[key] || role;
-  };
 
   return (
     <>

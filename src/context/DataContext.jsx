@@ -14,8 +14,20 @@ const normalizeRow = (row) => ({
   tanggalDiambil: row.tanggal_diambil || null,
 });
 
+const normalizeJadwalOnsite = (row) => ({
+  id: row.id,
+  tanggalOnsite: row.tanggal_onsite || null,
+  pelanggan: row.pelanggan || '',
+  lokasi: row.lokasi || '',
+  teknisi: row.teknisi || '',
+  jenisLayanan: row.jenis_layanan || '',
+  status: row.status || 'TERJADWAL',
+  catatan: row.catatan || '',
+});
+
 export function DataProvider({ children }) {
   const [rows, setRows] = useState([]);
+  const [jadwalOnsiteRows, setJadwalOnsiteRows] = useState([]);
 
   const loadRows = useCallback(async () => {
     const { data, error } = await supabase
@@ -26,13 +38,31 @@ export function DataProvider({ children }) {
     if (!error) setRows(Array.isArray(data) ? data : []);
   }, []);
 
+  const loadJadwalOnsite = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('jadwal_onsite')
+      .select('*')
+      .order('tanggal_onsite', { ascending: true })
+      .order('created_at', { ascending: false })
+      .limit(12);
+    if (!error) setJadwalOnsiteRows(Array.isArray(data) ? data : []);
+  }, []);
+
   useEffect(() => {
     loadRows();
+    loadJadwalOnsite();
 
     const dbChannel = supabase
       .channel('data-alat-kalibrasi')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alat_kalibrasi' }, () => {
         loadRows();
+      })
+      .subscribe();
+
+    const jadwalOnsiteChannel = supabase
+      .channel('data-jadwal-onsite')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jadwal_onsite' }, () => {
+        loadJadwalOnsite();
       })
       .subscribe();
 
@@ -84,11 +114,13 @@ export function DataProvider({ children }) {
 
     return () => {
       supabase.removeChannel(dbChannel);
+      supabase.removeChannel(jadwalOnsiteChannel);
       window.removeEventListener('alat-masuk-broadcast', handleBroadcastSync);
     };
-  }, [loadRows]);
+  }, [loadRows, loadJadwalOnsite]);
 
   const alatMasuk = useMemo(() => rows.map(normalizeRow), [rows]);
+  const jadwalOnsite = useMemo(() => jadwalOnsiteRows.map(normalizeJadwalOnsite), [jadwalOnsiteRows]);
 
   const alatKeluar = useMemo(
     () =>
@@ -192,6 +224,7 @@ export function DataProvider({ children }) {
         alatMasuk,
         alatKeluar,
         databaseKalibrasi,
+        jadwalOnsite,
         addAlatMasuk,
         editAlatMasuk,
         updateStatus,

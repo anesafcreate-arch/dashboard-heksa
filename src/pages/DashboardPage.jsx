@@ -12,7 +12,16 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import StatCard from '../components/ui/StatCard';
-import { Package, Hourglass, CheckCircle, BarChart3, Activity, MoreHorizontal } from 'lucide-react';
+import {
+  Package,
+  Hourglass,
+  CheckCircle,
+  BarChart3,
+  Activity,
+  MoreHorizontal,
+  CalendarDays,
+  MapPin,
+} from 'lucide-react';
 import AlatKeluarIcon from '../components/ui/AlatKeluarIcon';
 import { CHART_DATA_7HARI } from '../data/mockData';
 import './DashboardPage.css';
@@ -21,15 +30,19 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { alatMasuk, alatKeluar } = useData();
+  const { alatMasuk, alatKeluar, jadwalOnsite } = useData();
   const [activityFilter, setActivityFilter] = useState('all');
 
-  // Track previous DIAMBIL count to detect changes
+  const roleKey = String(user?.role || '').toLowerCase().trim();
+  const nameKey = String(user?.nama_lengkap || user?.nama || '').toLowerCase().trim();
+  const isManagerName = ['dian', 'fida', 'uko'].some((name) => nameKey.includes(name));
+  const canViewJadwalOnsite = ['direktur', 'manager', 'admin', 'teknisi'].includes(roleKey) || isManagerName;
+  const showKalibrasiChart = roleKey !== 'teknisi';
+
   const prevDiambilCountRef = useRef(
     alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL').length
   );
 
-  // Auto-switch to "Keluar" tab when a new item becomes DIAMBIL
   useEffect(() => {
     const currentDiambilCount = alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL').length;
     if (currentDiambilCount > prevDiambilCountRef.current) {
@@ -105,7 +118,6 @@ export default function DashboardPage() {
     },
   };
 
-  // Build a unified activity list from alatMasuk & alatKeluar
   const recentActivities = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     const activities = [];
@@ -113,15 +125,15 @@ export default function DashboardPage() {
     alatMasuk
       .filter((item) => item.tanggalMasuk === todayStr)
       .forEach((item) => {
-      activities.push({
-        id: `masuk-${item.id}`,
-        type: 'masuk',
-        name: item.namaAlat,
-        kode: item.kodeAlat,
-        date: item.tanggalMasuk,
-        status: 'MASUK',
-        jenisLayanan: item.jenisLayanan,
-      });
+        activities.push({
+          id: `masuk-${item.id}`,
+          type: 'masuk',
+          name: item.namaAlat,
+          kode: item.kodeAlat,
+          date: item.tanggalMasuk,
+          status: 'MASUK',
+          jenisLayanan: item.jenisLayanan,
+        });
       });
 
     alatKeluar
@@ -149,6 +161,8 @@ export default function DashboardPage() {
     return activities.slice(0, 8);
   }, [alatMasuk, alatKeluar, activityFilter]);
 
+  const onsiteRows = useMemo(() => (Array.isArray(jadwalOnsite) ? jadwalOnsite.slice(0, 8) : []), [jadwalOnsite]);
+
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
@@ -160,13 +174,74 @@ export default function DashboardPage() {
       admin: 'Beranda Administrasi',
       teknisi: 'Beranda Teknisi',
       direktur: 'Dashboard Eksekutif',
+      manager: 'Dashboard Manager',
     };
-    return titles[user?.role] || 'Dashboard';
+    return titles[roleKey] || 'Dashboard';
   };
 
   const statusColor = (type) => {
     return type === 'masuk' ? '#3b82f6' : '#22c55e';
   };
+
+  const onsiteStatusClass = (status) => String(status || 'TERJADWAL').toLowerCase();
+
+  const renderJadwalOnsiteTable = (className = '') => (
+    <div className={`dashboard-onsite-card ${className}`}>
+      <div className="onsite-card-header">
+        <div className="onsite-card-title">
+          <CalendarDays size={18} />
+          <span>Jadwal Onsite</span>
+        </div>
+        <span className="onsite-count-badge">{onsiteRows.length} jadwal</span>
+      </div>
+
+      <div className="onsite-table-wrapper">
+        <table className="onsite-table">
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Pelanggan</th>
+              <th>Lokasi</th>
+              <th>Teknisi</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {onsiteRows.length > 0 ? (
+              onsiteRows.map((item) => (
+                <tr key={item.id}>
+                  <td className="onsite-date-cell">{formatDateDisplay(item.tanggalOnsite)}</td>
+                  <td>
+                    <div className="onsite-client-cell">
+                      <span className="onsite-client-name">{item.pelanggan}</span>
+                      {item.jenisLayanan && <span className="onsite-service-name">{item.jenisLayanan}</span>}
+                    </div>
+                  </td>
+                  <td>
+                    <span className="onsite-location-cell">
+                      <MapPin size={14} /> {item.lokasi || '-'}
+                    </span>
+                  </td>
+                  <td className="onsite-technician-cell">{item.teknisi || '-'}</td>
+                  <td>
+                    <span className={`onsite-status-badge ${onsiteStatusClass(item.status)}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="activity-empty-cell">
+                  Belum ada jadwal onsite.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
   return (
     <div className="dashboard-page page-container">
@@ -183,14 +258,18 @@ export default function DashboardPage() {
       </div>
 
       <div className="dashboard-grid">
-        <div className="dashboard-chart-card">
-          <div className="dashboard-chart-title">
-            <BarChart3 size={18} /> Volume Kalibrasi — 7 Hari Terakhir
+        {showKalibrasiChart ? (
+          <div className="dashboard-chart-card">
+            <div className="dashboard-chart-title">
+              <BarChart3 size={18} /> Volume Kalibrasi - 7 Hari Terakhir
+            </div>
+            <div className="dashboard-chart-container">
+              <Bar data={chartData} options={chartOptions} />
+            </div>
           </div>
-          <div className="dashboard-chart-container">
-            <Bar data={chartData} options={chartOptions} />
-          </div>
-        </div>
+        ) : (
+          canViewJadwalOnsite && renderJadwalOnsiteTable('grid-card')
+        )}
 
         <div className="dashboard-activity-card">
           <div className="activity-card-header">
@@ -270,6 +349,12 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {canViewJadwalOnsite && showKalibrasiChart && (
+        <div className="dashboard-onsite-section">
+          {renderJadwalOnsiteTable()}
+        </div>
+      )}
     </div>
   );
 }

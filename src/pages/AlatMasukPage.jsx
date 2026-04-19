@@ -131,11 +131,20 @@ export default function AlatMasukPage() {
   };
 
   const exportCSV = () => {
-    const headers = ['No,Kode Alat,Nama Alat,Jenis Layanan,Tanggal Masuk,Dokumen'];
-    const rows = alatMasuk.map((item, idx) =>
-      `${idx + 1},${item.kodeAlat},${item.namaAlat},${item.jenisLayanan},${item.tanggalMasuk},${item.dokumenNama || '-'}`
-    );
-    const csv = [...headers, ...rows].join('\n');
+    const delimiter = ';';
+    const escapeCSV = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const headers = ['No', 'Kode Alat', 'Nama Alat', 'Jenis Layanan', 'Tanggal Masuk', 'Dokumen'];
+    const rows = alatMasuk.map((item, idx) => [
+      idx + 1,
+      item.kodeAlat,
+      item.namaAlat,
+      item.jenisLayanan,
+      item.tanggalMasuk,
+      item.dokumenNama || '-',
+    ]);
+    const csv = `\uFEFF${[headers, ...rows]
+      .map((row) => row.map(escapeCSV).join(delimiter))
+      .join('\r\n')}`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

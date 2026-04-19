@@ -116,6 +116,7 @@ export default function SettingsPage() {
       admin: 'blue',
       teknisi: 'amber',
       direktur: 'green',
+      manager: 'blue',
       disabled: 'gray',
     };
     return colors[String(role || '').toLowerCase().trim()] || 'blue';
@@ -300,6 +301,7 @@ export default function SettingsPage() {
                         style={{ width: '160px' }}
                       >
                         <option value="admin">admin</option>
+                        <option value="manager">manager</option>
                         <option value="teknisi">teknisi</option>
                         <option value="direktur">direktur</option>
                         <option value="disabled">disabled</option>

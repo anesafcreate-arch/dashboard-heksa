@@ -72,6 +72,169 @@
   height: 260px;
 }
 
+.dashboard-onsite-section {
+  margin-top: var(--space-lg);
+}
+
+.dashboard-onsite-card {
+  position: relative;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  overflow: hidden;
+}
+
+.dashboard-onsite-card.grid-card {
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.onsite-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.onsite-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.onsite-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 4px 12px;
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  border-radius: var(--radius-full);
+  background: rgba(14, 165, 233, 0.1);
+  color: #7dd3fc;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.onsite-table-wrapper {
+  flex: 1;
+  overflow: auto;
+}
+
+.onsite-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.onsite-table thead tr {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.onsite-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.onsite-table tbody tr {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.04);
+  transition: background var(--transition-fast);
+}
+
+.onsite-table tbody tr:hover {
+  background: rgba(14, 165, 233, 0.04);
+}
+
+.onsite-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.onsite-table td {
+  padding: 14px 12px;
+  vertical-align: middle;
+}
+
+.onsite-date-cell,
+.onsite-technician-cell {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.onsite-client-cell {
+  display: grid;
+  gap: 3px;
+  min-width: 160px;
+}
+
+.onsite-client-name {
+  color: var(--color-text-primary);
+  font-weight: 650;
+}
+
+.onsite-service-name {
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+}
+
+.onsite-location-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  min-width: 150px;
+}
+
+.onsite-status-badge {
+  display: inline-block;
+  min-width: 78px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.onsite-status-badge.terjadwal {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+}
+
+.onsite-status-badge.proses {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+}
+
+.onsite-status-badge.selesai {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.18);
+  color: #86efac;
+}
+
+.onsite-status-badge.batal {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
+
 /* ========================================
    Recent Activity Card — Premium Orizon
    ======================================== */
@@ -308,6 +471,10 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+  .onsite-card-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
   .activity-account-name {
     max-width: 120px;
