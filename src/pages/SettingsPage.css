@@ -161,6 +161,70 @@
   gap: var(--space-lg);
 }
 
+.settings-user-create-sheet {
+  display: grid;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: rgba(2, 8, 23, 0.35);
+}
+
+.settings-user-create-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(180px, 1fr) minmax(150px, 0.8fr) minmax(150px, 0.8fr) auto;
+  gap: 1px;
+  background: var(--color-border);
+}
+
+.settings-user-create-row.header {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.settings-user-create-row.header span {
+  padding: 10px 12px;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.settings-user-create-row > * {
+  min-width: 0;
+  background: rgba(10, 22, 40, 0.92);
+  border: none;
+  border-radius: 0;
+}
+
+.settings-user-create-row .form-input,
+.settings-user-create-row .form-select {
+  min-height: 44px;
+}
+
+.settings-user-create-row .btn-primary {
+  min-height: 44px;
+  border-radius: 0;
+  justify-content: center;
+  box-shadow: none;
+}
+
+.settings-username-cell {
+  display: flex;
+  align-items: center;
+}
+
+.settings-username-cell .form-input {
+  flex: 1;
+  min-width: 80px;
+}
+
+.settings-username-cell span {
+  padding-right: 12px;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
 /* User List */
 .settings-user-list {
   display: flex;
@@ -258,6 +322,13 @@
 @media (max-width: 768px) {
   .settings-users-grid {
     grid-template-columns: 1fr;
+  }
+  .settings-user-create-row,
+  .settings-user-create-row.header {
+    grid-template-columns: 1fr;
+  }
+  .settings-user-create-row.header {
+    display: none;
   }
   .settings-tabs {
     width: 100%;

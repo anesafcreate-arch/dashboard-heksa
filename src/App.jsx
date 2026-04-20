@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AlatMasukPage from './pages/AlatMasukPage';
 import AlatKeluarPage from './pages/AlatKeluarPage';
+import JadwalOnsitePage from './pages/JadwalOnsitePage';
 import DatabasePage from './pages/DatabasePage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -32,6 +33,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/alat-masuk" element={<AlatMasukPage />} />
         <Route path="/alat-keluar" element={<AlatKeluarPage />} />
+        <Route path="/jadwal-onsite" element={<JadwalOnsitePage />} />
         <Route
           path="/database"
           element={
@@ -43,7 +45,7 @@ function AppRoutes() {
         <Route
           path="/settings"
           element={
-            <RoleGuard allowedRoles={['direktur']}>
+            <RoleGuard allowedRoles={['direktur', 'managerkeuangan', 'managerpemasaran']}>
               <SettingsPage />
             </RoleGuard>
           }

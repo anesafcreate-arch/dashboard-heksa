@@ -142,7 +142,7 @@ export default function AlatMasukPage() {
       item.tanggalMasuk,
       item.dokumenNama || '-',
     ]);
-    const csv = `\uFEFF${[headers, ...rows]
+    const csv = `\uFEFFsep=${delimiter}\r\n${[headers, ...rows]
       .map((row) => row.map(escapeCSV).join(delimiter))
       .join('\r\n')}`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

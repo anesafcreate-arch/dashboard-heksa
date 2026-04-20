@@ -43,8 +43,7 @@ export function DataProvider({ children }) {
       .from('jadwal_onsite')
       .select('*')
       .order('tanggal_onsite', { ascending: true })
-      .order('created_at', { ascending: false })
-      .limit(12);
+      .order('created_at', { ascending: false });
     if (!error) setJadwalOnsiteRows(Array.isArray(data) ? data : []);
   }, []);
 
@@ -218,6 +217,44 @@ export function DataProvider({ children }) {
     await loadRows();
   }, [loadRows]);
 
+  const addJadwalOnsite = useCallback(async (item) => {
+    const { data, error } = await supabase
+      .from('jadwal_onsite')
+      .insert({
+        tanggal_onsite: item.tanggalOnsite,
+        pelanggan: item.pelanggan,
+        lokasi: item.lokasi,
+        teknisi: item.teknisi || null,
+        status: item.status || 'TERJADWAL',
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
+    await loadJadwalOnsite();
+    return data ? normalizeJadwalOnsite(data) : null;
+  }, [loadJadwalOnsite]);
+
+  const editJadwalOnsite = useCallback(async (item) => {
+    const { error } = await supabase
+      .from('jadwal_onsite')
+      .update({
+        tanggal_onsite: item.tanggalOnsite,
+        pelanggan: item.pelanggan,
+        lokasi: item.lokasi,
+        teknisi: item.teknisi || null,
+        status: item.status || 'TERJADWAL',
+      })
+      .eq('id', item.id);
+    if (error) throw error;
+    await loadJadwalOnsite();
+  }, [loadJadwalOnsite]);
+
+  const deleteJadwalOnsite = useCallback(async (id) => {
+    const { error } = await supabase.from('jadwal_onsite').delete().eq('id', id);
+    if (error) throw error;
+    await loadJadwalOnsite();
+  }, [loadJadwalOnsite]);
+
   return (
     <DataContext.Provider
       value={{
@@ -232,6 +269,9 @@ export function DataProvider({ children }) {
         addDatabase,
         editDatabase,
         deleteDatabase,
+        addJadwalOnsite,
+        editJadwalOnsite,
+        deleteJadwalOnsite,
       }}
     >
       {children}

@@ -19,9 +19,10 @@ export default function LoginPage() {
     
     setIsLoggingIn(true);
 
-    const emailLogin = username.includes('@') 
-      ? username 
-      : `${username.toLowerCase()}@heksa.com`;
+    const normalizedUsername = username.trim().toLowerCase();
+    const emailLogin = normalizedUsername.includes('@')
+      ? normalizedUsername
+      : `${normalizedUsername}@heksa.com`;
 
     try {
       const success = await login(emailLogin, password);
@@ -56,7 +57,7 @@ export default function LoginPage() {
               <input
                 id="login-username"
                 type="text"
-                placeholder="ID Pegawai (admin/teknisi/direktur)"
+                placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"

@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, Database, LogOut, Settings } from 'lucide-react';
+import { LayoutDashboard, Package, Database, LogOut, Settings, CalendarDays } from 'lucide-react';
 import AlatKeluarIcon from '../ui/AlatKeluarIcon';
 import { useAuth } from '../../context/AuthContext';
-import { getRoleGroup, normalizeRole } from '../../utils/roles';
+import { canAccessSettings, getRoleGroup, normalizeRole } from '../../utils/roles';
 import './Sidebar.css';
 
 const MENU_ITEMS = {
@@ -10,24 +10,27 @@ const MENU_ITEMS = {
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
     { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
+    { path: '/jadwal-onsite', label: 'Jadwal Onsite', icon: <CalendarDays size={20} /> },
     { path: '/database', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
   ],
   teknisi: [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
     { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
+    { path: '/jadwal-onsite', label: 'Jadwal Onsite', icon: <CalendarDays size={20} /> },
   ],
   direktur: [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
     { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
+    { path: '/jadwal-onsite', label: 'Jadwal Onsite', icon: <CalendarDays size={20} /> },
     { path: '/database', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
-    { path: '/settings', label: 'Pengaturan', icon: <Settings size={20} />, section: 'Pengaturan' },
   ],
   manager: [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
     { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
+    { path: '/jadwal-onsite', label: 'Jadwal Onsite', icon: <CalendarDays size={20} /> },
   ],
 };
 
@@ -36,7 +39,12 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   // Normalisasi role agar aman dari case/spasi (contoh: "Admin", "admin ", dll)
   const roleKey = normalizeRole(user?.role);
   const roleGroup = getRoleGroup(roleKey);
-  const menuItems = MENU_ITEMS[roleGroup] || [];
+  const menuItems = [
+    ...(MENU_ITEMS[roleGroup] || []),
+    ...(canAccessSettings(roleKey)
+      ? [{ path: '/settings', label: 'Pengaturan', icon: <Settings size={20} />, section: 'Pengaturan' }]
+      : []),
+  ];
 
   // Separate main menu from settings
   const mainItems = menuItems.filter((item) => !item.section);

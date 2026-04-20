@@ -36,6 +36,21 @@ begin
 end;
 $$;
 
+create or replace function public.current_profile_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select lower(trim(p.role))
+  from public."Profile" p
+  where p.id = auth.uid()
+  limit 1
+$$;
+
+grant execute on function public.current_profile_role() to authenticated;
+
 drop trigger if exists trg_alat_kalibrasi_updated_at on public.alat_kalibrasi;
 create trigger trg_alat_kalibrasi_updated_at
 before update on public.alat_kalibrasi
@@ -138,7 +153,8 @@ to authenticated
 using (true);
 
 drop policy if exists "jadwal_onsite_insert_admin_manager_direktur" on public.jadwal_onsite;
-create policy "jadwal_onsite_insert_admin_manager_direktur"
+drop policy if exists "jadwal_onsite_insert_direktur_manager" on public.jadwal_onsite;
+create policy "jadwal_onsite_insert_direktur_manager"
 on public.jadwal_onsite
 for insert
 to authenticated
@@ -148,14 +164,15 @@ with check (
     from public."Profile" p
     where p.id = auth.uid()
       and (
-        lower(trim(p.role)) in ('admin', 'direktur')
+        lower(trim(p.role)) = 'direktur'
         or lower(trim(p.role)) like 'manager%'
       )
   )
 );
 
 drop policy if exists "jadwal_onsite_update_admin_manager_direktur" on public.jadwal_onsite;
-create policy "jadwal_onsite_update_admin_manager_direktur"
+drop policy if exists "jadwal_onsite_update_direktur_manager" on public.jadwal_onsite;
+create policy "jadwal_onsite_update_direktur_manager"
 on public.jadwal_onsite
 for update
 to authenticated
@@ -165,7 +182,7 @@ using (
     from public."Profile" p
     where p.id = auth.uid()
       and (
-        lower(trim(p.role)) in ('admin', 'direktur')
+        lower(trim(p.role)) = 'direktur'
         or lower(trim(p.role)) like 'manager%'
       )
   )
@@ -176,14 +193,15 @@ with check (
     from public."Profile" p
     where p.id = auth.uid()
       and (
-        lower(trim(p.role)) in ('admin', 'direktur')
+        lower(trim(p.role)) = 'direktur'
         or lower(trim(p.role)) like 'manager%'
       )
   )
 );
 
 drop policy if exists "jadwal_onsite_delete_admin_direktur" on public.jadwal_onsite;
-create policy "jadwal_onsite_delete_admin_direktur"
+drop policy if exists "jadwal_onsite_delete_direktur_manager" on public.jadwal_onsite;
+create policy "jadwal_onsite_delete_direktur_manager"
 on public.jadwal_onsite
 for delete
 to authenticated
@@ -192,6 +210,39 @@ using (
     select 1
     from public."Profile" p
     where p.id = auth.uid()
-      and lower(trim(p.role)) in ('admin', 'direktur')
+      and (
+        lower(trim(p.role)) = 'direktur'
+        or lower(trim(p.role)) like 'manager%'
+      )
   )
+);
+
+alter table public."Profile" enable row level security;
+
+drop policy if exists "profile_select_authenticated" on public."Profile";
+create policy "profile_select_authenticated"
+on public."Profile"
+for select
+to authenticated
+using (true);
+
+drop policy if exists "profile_insert_pengaturan" on public."Profile";
+create policy "profile_insert_pengaturan"
+on public."Profile"
+for insert
+to authenticated
+with check (
+  public.current_profile_role() in ('direktur', 'managerkeuangan', 'managerpemasaran')
+);
+
+drop policy if exists "profile_update_pengaturan" on public."Profile";
+create policy "profile_update_pengaturan"
+on public."Profile"
+for update
+to authenticated
+using (
+  public.current_profile_role() in ('direktur', 'managerkeuangan', 'managerpemasaran')
+)
+with check (
+  public.current_profile_role() in ('direktur', 'managerkeuangan', 'managerpemasaran')
 );

@@ -1,9 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Settings, UserPlus, Lock, Eye, EyeOff, Trash2, Shield, User, CheckCircle, AlertCircle } from 'lucide-react';
+import { Settings, UserPlus, Lock, Eye, EyeOff, Trash2, Shield, User, CheckCircle, AlertCircle, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { getRoleGroup, normalizeRole } from '../utils/roles';
+import { canAccessSettings, getRoleGroup, normalizeRole } from '../utils/roles';
 import './SettingsPage.css';
+
+const ROLE_OPTIONS = [
+  { value: 'admin', label: 'admin' },
+  { value: 'managermutu', label: 'managermutu' },
+  { value: 'managerkeuangan', label: 'managerkeuangan' },
+  { value: 'managerpemasaran', label: 'managerpemasaran' },
+  { value: 'teknisi', label: 'teknisi' },
+  { value: 'direktur', label: 'direktur' },
+  { value: 'disabled', label: 'disabled' },
+];
+
+const EMPTY_USER_FORM = {
+  namaLengkap: '',
+  username: '',
+  password: '',
+  role: 'teknisi',
+};
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -22,9 +39,11 @@ export default function SettingsPage() {
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [profilesMsg, setProfilesMsg] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // id profile yang akan dinonaktifkan
+  const [newUser, setNewUser] = useState(EMPTY_USER_FORM);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   const roleKey = normalizeRole(user?.role);
-  const canManageUsers = roleKey === 'direktur';
+  const canManageUsers = canAccessSettings(roleKey);
 
   // Handle Password Change
   const handlePasswordChange = async (e) => {
@@ -121,6 +140,68 @@ export default function SettingsPage() {
       disabled: 'gray',
     };
     return colors[getRoleGroup(role)] || 'blue';
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    if (!canManageUsers || isCreatingUser) return;
+    setProfilesMsg(null);
+
+    const username = newUser.username.trim().toLowerCase();
+    const email = username.includes('@') ? username : `${username}@heksa.com`;
+    if (!newUser.namaLengkap.trim() || !username || !newUser.password || !newUser.role) {
+      setProfilesMsg({ type: 'error', text: 'Nama lengkap, username, password, dan role wajib diisi.' });
+      return;
+    }
+    if (newUser.password.length < 6) {
+      setProfilesMsg({ type: 'error', text: 'Password minimal 6 karakter.' });
+      return;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentSession = sessionData?.session;
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: newUser.password,
+        options: {
+          data: {
+            nama_lengkap: newUser.namaLengkap.trim(),
+            role: newUser.role,
+          },
+        },
+      });
+      if (signUpError) throw signUpError;
+
+      if (currentSession?.access_token && currentSession?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: currentSession.access_token,
+          refresh_token: currentSession.refresh_token,
+        });
+      }
+
+      const createdUserId = signUpData?.user?.id;
+      if (createdUserId) {
+        const { error: profileError } = await supabase
+          .from('Profile')
+          .upsert({
+            id: createdUserId,
+            nama_lengkap: newUser.namaLengkap.trim(),
+            role: newUser.role,
+          });
+        if (profileError) throw profileError;
+      }
+
+      setNewUser(EMPTY_USER_FORM);
+      await fetchProfiles();
+      setProfilesMsg({ type: 'success', text: `User ${email} berhasil dibuat.` });
+    } catch (err) {
+      setProfilesMsg({ type: 'error', text: err?.message || 'Gagal membuat user baru.' });
+    } finally {
+      setIsCreatingUser(false);
+    }
   };
 
   return (
@@ -246,14 +327,58 @@ export default function SettingsPage() {
               {!canManageUsers ? (
                 <div className="settings-message error">
                   <AlertCircle size={16} />
-                  Fitur ini hanya untuk role <strong>Direktur</strong>.
+                  Fitur ini hanya untuk Direktur, Manager Keuangan, dan Manager Pemasaran.
                 </div>
               ) : (
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-                    Penambahan akun login baru perlu dibuat di <strong>Supabase Auth</strong> (demi keamanan).
-                    Setelah akun dibuat, role aksesnya diatur lewat daftar user di sebelah.
-                  </div>
+                <div style={{ display: 'grid', gap: '14px' }}>
+                  <form className="settings-user-create-sheet" onSubmit={handleCreateUser}>
+                    <div className="settings-user-create-row header">
+                      <span>Nama Lengkap</span>
+                      <span>Username/ID</span>
+                      <span>Password</span>
+                      <span>Role/Kelas</span>
+                      <span>Aksi</span>
+                    </div>
+                    <div className="settings-user-create-row">
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={newUser.namaLengkap}
+                        onChange={(e) => setNewUser({ ...newUser, namaLengkap: e.target.value })}
+                        placeholder="Nama user"
+                      />
+                      <div className="settings-username-cell">
+                        <input
+                          className="form-input"
+                          type="text"
+                          value={newUser.username}
+                          onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                          placeholder="fida"
+                        />
+                        <span>@heksa.com</span>
+                      </div>
+                      <input
+                        className="form-input"
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        placeholder="Min. 6 karakter"
+                      />
+                      <select
+                        className="form-select"
+                        value={newUser.role}
+                        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                      >
+                        {ROLE_OPTIONS.filter((option) => option.value !== 'disabled').map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                      <button className="btn-primary" type="submit" disabled={isCreatingUser}>
+                        <Save size={16} /> {isCreatingUser ? 'Menyimpan...' : 'Simpan'}
+                      </button>
+                    </div>
+                  </form>
+
                   <button className="btn-secondary" onClick={fetchProfiles} disabled={profilesLoading}>
                     Muat Ulang Daftar User
                   </button>
@@ -301,13 +426,9 @@ export default function SettingsPage() {
                         onChange={(e) => updateProfile(p.id, { role: e.target.value })}
                         style={{ width: '160px' }}
                       >
-                        <option value="admin">admin</option>
-                        <option value="managermutu">managermutu</option>
-                        <option value="managerkeuangan">managerkeuangan</option>
-                        <option value="managerpemasaran">managerpemasaran</option>
-                        <option value="teknisi">teknisi</option>
-                        <option value="direktur">direktur</option>
-                        <option value="disabled">disabled</option>
+                        {ROLE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                       </select>
                     ) : null}
                     {canManageUsers && p.id !== user?.id && (
