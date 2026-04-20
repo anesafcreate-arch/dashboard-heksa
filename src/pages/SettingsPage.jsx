@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Settings, UserPlus, Lock, Eye, EyeOff, Trash2, Shield, User, CheckCircle, AlertCircle, Save, Plus } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseSignupClient } from '../supabaseClient';
 import DataTable from '../components/ui/DataTable';
 import Modal, { ConfirmDialog } from '../components/ui/Modal';
 import { canAccessSettings, getRoleGroup, normalizeRole } from '../utils/roles';
@@ -85,11 +85,13 @@ export default function SettingsPage() {
     }
 
     try {
-      const email = user?.email;
-      if (!email) throw new Error('Email user tidak ditemukan.');
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      const currentUser = userData?.user;
+      if (!currentUser?.email) throw new Error('Email user aktif tidak ditemukan.');
 
       const { error: reauthError } = await supabase.auth.signInWithPassword({
-        email,
+        email: currentUser.email,
         password: currentPassword,
       });
       if (reauthError) throw reauthError;
@@ -171,10 +173,7 @@ export default function SettingsPage() {
 
     setIsCreatingUser(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const currentSession = sessionData?.session;
-
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabaseSignupClient.auth.signUp({
         email,
         password: newUser.password,
         options: {
@@ -186,13 +185,6 @@ export default function SettingsPage() {
         },
       });
       if (signUpError) throw signUpError;
-
-      if (currentSession?.access_token && currentSession?.refresh_token) {
-        await supabase.auth.setSession({
-          access_token: currentSession.access_token,
-          refresh_token: currentSession.refresh_token,
-        });
-      }
 
       const createdUserId = signUpData?.user?.id;
       if (createdUserId) {
