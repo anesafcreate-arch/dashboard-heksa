@@ -67,6 +67,7 @@
 
 .data-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
 }
 
@@ -360,11 +361,25 @@
 }
 
 @media (max-width: 768px) {
+  .data-table-wrapper {
+    border-radius: var(--radius-md);
+  }
   .data-table-toolbar {
     padding: var(--space-md);
+    align-items: stretch;
+    flex-direction: column;
   }
   .data-table-search {
     max-width: 100%;
+    width: 100%;
+  }
+  .data-table-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .data-table-actions > * {
+    flex: 1 1 160px;
+    justify-content: center;
   }
   .data-table-footer {
     flex-direction: column;

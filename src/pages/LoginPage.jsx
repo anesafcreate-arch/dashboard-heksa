@@ -19,13 +19,11 @@ export default function LoginPage() {
     
     setIsLoggingIn(true);
 
-    const normalizedUsername = username.trim().toLowerCase();
-    const emailLogin = normalizedUsername.includes('@')
-      ? normalizedUsername
-      : `${normalizedUsername}@heksa.com`;
+    const usernameInput = username.trim().toLowerCase();
+    const finalEmail = `${usernameInput}@heksa.com`;
 
     try {
-      const success = await login(emailLogin, password);
+      const success = await login(finalEmail, password);
       if (success) {
         navigate('/dashboard', { replace: true });
       }
@@ -57,9 +55,9 @@ export default function LoginPage() {
               <input
                 id="login-username"
                 type="text"
-                placeholder="Username"
+                placeholder="Username/ID"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => setUsername(e.target.value.replace(/@.*/, '').replace(/\s/g, ''))}
                 autoComplete="username"
                 disabled={isLoggingIn}
                 required

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { Camera, ChevronDown } from 'lucide-react';
+import { Camera, ChevronDown, Menu } from 'lucide-react';
 import './Header.css';
 
 export default function Header({ onToggleSidebar }) {
@@ -84,7 +84,7 @@ export default function Header({ onToggleSidebar }) {
     <header className="header">
       <div className="header-left">
         <button className="header-hamburger" onClick={onToggleSidebar}>
-          ☰
+          <Menu size={22} />
         </button>
         <div className="header-greeting">
           {getGreeting()}, <strong>{getFirstName()}</strong> 👋

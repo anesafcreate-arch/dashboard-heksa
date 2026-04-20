@@ -319,6 +319,95 @@
   color: var(--color-danger);
 }
 
+.settings-users-full {
+  width: 100%;
+}
+
+.settings-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.settings-table-header .settings-card-header {
+  margin-bottom: 0;
+}
+
+.settings-table-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 180px;
+}
+
+.settings-username-id {
+  font-family: 'Inter', monospace;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.settings-role-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 260px;
+}
+
+.settings-role-select {
+  max-width: 170px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  font-size: 0.8rem;
+}
+
+.settings-action-muted {
+  color: var(--color-text-muted);
+}
+
+.settings-user-modal-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.settings-user-modal-form .form-group {
+  margin-bottom: 0;
+}
+
+.settings-username-modal-cell {
+  display: flex;
+  align-items: stretch;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.settings-username-modal-cell:focus-within {
+  border-color: var(--color-brand-accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.settings-username-modal-cell .form-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-username-modal-cell span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .settings-users-grid {
     grid-template-columns: 1fr;
@@ -336,5 +425,22 @@
   .settings-tab {
     flex: 1;
     justify-content: center;
+  }
+  .settings-card {
+    padding: var(--space-lg);
+  }
+  .settings-table-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .settings-table-header .btn-primary {
+    justify-content: center;
+    width: 100%;
+  }
+  .settings-user-modal-form {
+    grid-template-columns: 1fr;
+  }
+  .settings-role-cell {
+    min-width: 220px;
   }
 }

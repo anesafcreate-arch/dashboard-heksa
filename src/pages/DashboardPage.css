@@ -462,10 +462,19 @@
 
 @media (max-width: 768px) {
   .dashboard-stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
   }
   .dashboard-header h1 {
     font-size: 1.2rem;
+  }
+  .dashboard-chart-card,
+  .dashboard-activity-card,
+  .dashboard-onsite-card {
+    padding: var(--space-lg);
+  }
+  .dashboard-chart-container {
+    height: 220px;
   }
   .activity-card-header {
     flex-direction: column;
@@ -482,7 +491,8 @@
 }
 
 @media (max-width: 480px) {
-  .dashboard-stats {
-    grid-template-columns: 1fr;
+  .activity-filter-tabs {
+    width: 100%;
+    overflow-x: auto;
   }
 }

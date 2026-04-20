@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CalendarDays, Edit, MapPin, Plus, Save, Trash2, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import DataTable from '../components/ui/DataTable';
 import Modal, { ConfirmDialog } from '../components/ui/Modal';
-import { supabase } from '../supabaseClient';
 import { canManageJadwalOnsite, normalizeRole } from '../utils/roles';
 import './PageStyles.css';
 
@@ -24,27 +23,9 @@ export default function JadwalOnsitePage() {
   const [editingItem, setEditingItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
-  const [technicians, setTechnicians] = useState([]);
   const [message, setMessage] = useState(null);
 
   const canManage = canManageJadwalOnsite(user?.role);
-
-  useEffect(() => {
-    const loadTechnicians = async () => {
-      const { data } = await supabase
-        .from('Profile')
-        .select('nama_lengkap,role')
-        .ilike('role', 'teknisi')
-        .order('nama_lengkap', { ascending: true });
-
-      const names = Array.isArray(data)
-        ? data.map((item) => item.nama_lengkap).filter(Boolean)
-        : [];
-      setTechnicians(names);
-    };
-
-    loadTechnicians();
-  }, []);
 
   const resetForm = () => {
     setFormData(EMPTY_FORM);
@@ -235,16 +216,13 @@ export default function JadwalOnsitePage() {
 
         <div className="form-group">
           <label className="form-label">Teknisi</label>
-          <select
-            className="form-select"
+          <input
+            className="form-input"
+            type="text"
+            placeholder="Ketik nama teknisi"
             value={formData.teknisi}
             onChange={(e) => setFormData({ ...formData, teknisi: e.target.value })}
-          >
-            <option value="">Pilih Teknisi</option>
-            {technicians.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="form-group">

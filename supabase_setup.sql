@@ -51,6 +51,13 @@ $$;
 
 grant execute on function public.current_profile_role() to authenticated;
 
+alter table public."Profile"
+  add column if not exists username text;
+
+create unique index if not exists idx_profile_username_unique
+  on public."Profile" (lower(trim(username)))
+  where username is not null and trim(username) <> '';
+
 drop trigger if exists trg_alat_kalibrasi_updated_at on public.alat_kalibrasi;
 create trigger trg_alat_kalibrasi_updated_at
 before update on public.alat_kalibrasi
