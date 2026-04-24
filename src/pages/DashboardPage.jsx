@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import AlatKeluarIcon from '../components/ui/AlatKeluarIcon';
 import { CHART_DATA_7HARI } from '../data/mockData';
-import { getRoleGroup, isManagerRole, normalizeRole } from '../utils/roles';
+import { getRoleGroup, normalizeRole } from '../utils/roles';
 import './DashboardPage.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -36,10 +36,8 @@ export default function DashboardPage() {
 
   const roleKey = normalizeRole(user?.role);
   const roleGroup = getRoleGroup(roleKey);
-  const nameKey = String(user?.nama_lengkap || user?.nama || '').toLowerCase().trim();
-  const isManagerName = ['dian', 'fida', 'uko'].some((name) => nameKey.includes(name));
-  const canViewJadwalOnsite = ['direktur', 'admin', 'teknisi'].includes(roleKey) || isManagerRole(roleKey) || isManagerName;
   const showKalibrasiChart = roleKey !== 'teknisi';
+  const showJadwalOnsiteSummary = roleKey !== 'teknisi';
 
   const prevDiambilCountRef = useRef(
     alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL').length
@@ -163,7 +161,10 @@ export default function DashboardPage() {
     return activities.slice(0, 8);
   }, [alatMasuk, alatKeluar, activityFilter]);
 
-  const onsiteRows = useMemo(() => (Array.isArray(jadwalOnsite) ? jadwalOnsite.slice(0, 8) : []), [jadwalOnsite]);
+  const onsiteRows = useMemo(
+    () => (Array.isArray(jadwalOnsite) ? jadwalOnsite.slice(0, 8) : []),
+    [jadwalOnsite]
+  );
 
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return '-';
@@ -188,7 +189,7 @@ export default function DashboardPage() {
   const onsiteStatusClass = (status) => String(status || 'TERJADWAL').toLowerCase();
 
   const renderJadwalOnsiteTable = (className = '') => (
-    <div className={`dashboard-onsite-card ${className}`}>
+    <div className={`dashboard-onsite-card ${className}`.trim()}>
       <div className="onsite-card-header">
         <div className="onsite-card-title">
           <CalendarDays size={18} />
@@ -259,8 +260,8 @@ export default function DashboardPage() {
         <StatCard icon={<CheckCircle size={24} />} label="Selesai" value={stats.selesai} sub="Selesai & diambil" variant="cyan" />
       </div>
 
-      <div className="dashboard-grid">
-        {showKalibrasiChart ? (
+      <div className={`dashboard-grid ${showJadwalOnsiteSummary ? '' : 'single-column'}`.trim()}>
+        {showKalibrasiChart && (
           <div className="dashboard-chart-card">
             <div className="dashboard-chart-title">
               <BarChart3 size={18} /> Volume Kalibrasi - 7 Hari Terakhir
@@ -269,11 +270,9 @@ export default function DashboardPage() {
               <Bar data={chartData} options={chartOptions} />
             </div>
           </div>
-        ) : (
-          canViewJadwalOnsite && renderJadwalOnsiteTable('grid-card')
         )}
 
-        <div className="dashboard-activity-card">
+        <div className={`dashboard-activity-card ${showJadwalOnsiteSummary ? '' : 'full-width'}`.trim()}>
           <div className="activity-card-header">
             <div className="activity-card-title">
               <Activity size={18} />
@@ -352,7 +351,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {canViewJadwalOnsite && showKalibrasiChart && (
+      {showJadwalOnsiteSummary && (
         <div className="dashboard-onsite-section">
           {renderJadwalOnsiteTable()}
         </div>
