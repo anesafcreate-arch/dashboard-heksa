@@ -7,6 +7,7 @@ import Modal, { ConfirmDialog } from '../components/ui/Modal';
 import { Package, Download, Plus, Edit, Trash2, CloudUpload, Paperclip, Save, Eye } from 'lucide-react';
 import { JENIS_LAYANAN } from '../data/mockData';
 import { supabase } from '../supabaseClient';
+import { resolveRole } from '../utils/roles';
 import './PageStyles.css';
 
 export default function AlatMasukPage() {
@@ -14,8 +15,8 @@ export default function AlatMasukPage() {
   const { alatMasuk, addAlatMasuk, editAlatMasuk, deleteAlatMasuk } = useData();
   const { addNotification } = useNotification();
 
-  const roleKey = String(user?.role || '').toLowerCase().trim();
-  const isAdmin = roleKey === 'admin';
+  const roleName = resolveRole(user?.role, user?.email);
+  const canManage = roleName === 'adminutama' || roleName === 'admin';
 
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -174,7 +175,7 @@ export default function AlatMasukPage() {
           <span style={{ color: 'var(--color-text-muted)' }}>—</span>
         ),
     },
-    ...(isAdmin
+    ...(canManage
       ? [
           {
             header: 'Aksi',
@@ -201,12 +202,12 @@ export default function AlatMasukPage() {
           <Package size={28} color="var(--color-primary)" /> Alat Masuk
         </h1>
         <div className="page-header-actions">
-          {!isAdmin && (
+          {!canManage && (
             <span className="badge info" style={{ fontSize: '0.78rem', padding: '5px 14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Eye size={14} /> Mode Lihat Saja
             </span>
           )}
-          {isAdmin && (
+          {canManage && (
             <>
               <button className="btn-secondary" onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Download size={16} /> Ekspor CSV
@@ -324,7 +325,7 @@ export default function AlatMasukPage() {
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         title="Hapus Alat?"
-        message="Data alat ini akan dihapus dari Alat Masuk dan Alat Keluar. Tindakan ini tidak dapat dibatalkan."
+        message="Data alat ini akan dihapus dari Alat Masuk dan Status Alat. Tindakan ini tidak dapat dibatalkan."
         confirmText="Ya, Hapus"
       />
     </div>

@@ -1,12 +1,14 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
-import { supabase } from '../supabaseClient'; 
+import { supabase } from '../supabaseClient';
+import { resolveRole } from '../utils/roles';
 
 const AuthContext = createContext(null);
 
 const initialState = {
   user: null,
   isAuthenticated: false,
-  loading: true, // PENGAMAN 1: Tambahkan loading state
+  loading: true,
   error: null,
 };
 
@@ -32,43 +34,55 @@ function authReducer(state, action) {
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // PENGAMAN 2: Cek sesi memori saat web pertama kali dibuka agar tidak logout otomatis
+  const getProfileByUser = useCallback(async (authUser) => {
+    if (!authUser?.id) return null;
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id,email,role,created_at')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    const email = profileData?.email || authUser.email || '';
+    const finalRole = resolveRole(profileData?.role, email);
+
+    return {
+      id: authUser.id,
+      email,
+      nama_lengkap: authUser.user_metadata?.nama_lengkap || email.split('@')[0],
+      role: finalRole,
+    };
+  }, []);
+
   useEffect(() => {
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user) {
-          const { data: profileData } = await supabase
-            .from('Profile')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          const userPayload = {
-            id: session.user.id,
-            email: session.user.email,
-            nama_lengkap: profileData?.nama_lengkap,
-            role: profileData?.role,
-          };
+          const userPayload = await getProfileByUser(session.user);
           dispatch({ type: 'INITIALIZE', payload: { user: userPayload } });
         } else {
           dispatch({ type: 'INITIALIZE', payload: { user: null } });
         }
-      } catch (error) {
+      } catch {
         dispatch({ type: 'INITIALIZE', payload: { user: null } });
       }
     };
 
     initializeAuth();
 
-    // Dengarkan perubahan jika user logout
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) dispatch({ type: 'LOGOUT' });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const userPayload = await getProfileByUser(session.user);
+        dispatch({ type: 'INITIALIZE', payload: { user: userPayload } });
+      } else {
+        dispatch({ type: 'LOGOUT' });
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [getProfileByUser]);
 
   const login = useCallback(async (email, password) => {
     try {
@@ -78,19 +92,7 @@ export function AuthProvider({ children }) {
       });
       if (authError) throw authError;
 
-      const { data: profileData, error: profileError } = await supabase
-        .from('Profile')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single();
-      if (profileError) throw profileError;
-
-      const userPayload = {
-        id: authData.user.id,
-        email: authData.user.email,
-        nama_lengkap: profileData.nama_lengkap,
-        role: profileData.role, 
-      };
+      const userPayload = await getProfileByUser(authData.user);
 
       dispatch({ type: 'LOGIN_SUCCESS', payload: userPayload });
       return true;
@@ -98,7 +100,7 @@ export function AuthProvider({ children }) {
       dispatch({ type: 'LOGIN_FAILURE', payload: err.message });
       return false;
     }
-  }, []);
+  }, [getProfileByUser]);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
@@ -109,7 +111,6 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 
-  // PENGAMAN 3: Tambahkan fungsi dummy agar Header.jsx tidak crash
   const updateProfilePhoto = useCallback((photoUrl) => {
     dispatch({ type: 'UPDATE_PHOTO', payload: photoUrl });
   }, []);

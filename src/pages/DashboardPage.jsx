@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import AlatKeluarIcon from '../components/ui/AlatKeluarIcon';
 import { CHART_DATA_7HARI } from '../data/mockData';
-import { getRoleGroup, normalizeRole } from '../utils/roles';
+import { getRoleGroup } from '../utils/roles';
 import './DashboardPage.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -34,22 +34,7 @@ export default function DashboardPage() {
   const { alatMasuk, alatKeluar, jadwalOnsite } = useData();
   const [activityFilter, setActivityFilter] = useState('all');
 
-  const roleKey = normalizeRole(user?.role);
-  const roleGroup = getRoleGroup(roleKey);
-  const showKalibrasiChart = roleKey !== 'teknisi';
-  const showJadwalOnsiteSummary = roleKey !== 'teknisi';
-
-  const prevDiambilCountRef = useRef(
-    alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL').length
-  );
-
-  useEffect(() => {
-    const currentDiambilCount = alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL').length;
-    if (currentDiambilCount > prevDiambilCountRef.current) {
-      setActivityFilter('keluar');
-    }
-    prevDiambilCountRef.current = currentDiambilCount;
-  }, [alatKeluar]);
+  const roleGroup = getRoleGroup(user?.role);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -73,7 +58,7 @@ export default function DashboardPage() {
         borderRadius: 8,
       },
       {
-        label: 'Alat Keluar',
+        label: 'Status Alat',
         data: CHART_DATA_7HARI.keluar,
         backgroundColor: 'rgba(34, 197, 94, 0.6)',
         borderColor: 'rgba(34, 197, 94, 1)',
@@ -174,7 +159,9 @@ export default function DashboardPage() {
 
   const getRoleTitle = () => {
     const titles = {
-      admin: 'Beranda Administrasi',
+      adminutama: 'Dashboard AdminUtama',
+      admin: 'Beranda Admin',
+      supervisor: 'Beranda Supervisor',
       teknisi: 'Beranda Teknisi',
       direktur: 'Dashboard Eksekutif',
       manager: 'Dashboard Manager',
@@ -255,24 +242,26 @@ export default function DashboardPage() {
 
       <div className="dashboard-stats">
         <StatCard icon={<Package size={24} />} label="Alat Masuk Hari Ini" value={stats.masukToday} sub="Total item diterima" variant="blue" />
-        <StatCard icon={<AlatKeluarIcon size={24} />} label="Alat Keluar Hari Ini" value={stats.keluarToday} sub="Diserahkan ke pelanggan" variant="green" />
+        <StatCard icon={<AlatKeluarIcon size={24} />} label="Status Alat Hari Ini" value={stats.keluarToday} sub="Diserahkan ke pelanggan" variant="green" />
         <StatCard icon={<Hourglass size={24} />} label="Dalam Proses" value={stats.proses} sub="Menunggu / dikalibrasi" variant="amber" />
         <StatCard icon={<CheckCircle size={24} />} label="Selesai" value={stats.selesai} sub="Selesai & diambil" variant="cyan" />
       </div>
 
-      <div className={`dashboard-grid ${showJadwalOnsiteSummary ? '' : 'single-column'}`.trim()}>
-        {showKalibrasiChart && (
-          <div className="dashboard-chart-card">
-            <div className="dashboard-chart-title">
-              <BarChart3 size={18} /> Volume Kalibrasi - 7 Hari Terakhir
-            </div>
-            <div className="dashboard-chart-container">
-              <Bar data={chartData} options={chartOptions} />
-            </div>
+      <div className="dashboard-row-2">
+        <div className="dashboard-chart-card">
+          <div className="dashboard-chart-title">
+            <BarChart3 size={18} /> Volume Kalibrasi - 7 Hari Terakhir
           </div>
-        )}
+          <div className="dashboard-chart-container">
+            <Bar data={chartData} options={chartOptions} />
+          </div>
+        </div>
 
-        <div className={`dashboard-activity-card ${showJadwalOnsiteSummary ? '' : 'full-width'}`.trim()}>
+        {renderJadwalOnsiteTable('grid-card')}
+      </div>
+
+      <div className="dashboard-row-3">
+        <div className="dashboard-activity-card">
           <div className="activity-card-header">
             <div className="activity-card-title">
               <Activity size={18} />
@@ -295,7 +284,7 @@ export default function DashboardPage() {
                 className={`activity-tab ${activityFilter === 'keluar' ? 'active' : ''}`}
                 onClick={() => setActivityFilter('keluar')}
               >
-                Keluar
+                Status Alat
               </button>
             </div>
           </div>
@@ -350,12 +339,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      {showJadwalOnsiteSummary && (
-        <div className="dashboard-onsite-section">
-          {renderJadwalOnsiteTable()}
-        </div>
-      )}
     </div>
   );
 }

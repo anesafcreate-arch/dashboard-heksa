@@ -28,14 +28,15 @@
   margin-bottom: var(--space-xl);
 }
 
-.dashboard-grid {
+.dashboard-row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-lg);
 }
 
-.dashboard-grid.single-column {
-  grid-template-columns: 1fr;
+.dashboard-row-3 {
+  margin-top: var(--space-lg);
+  width: 100%;
 }
 
 /* Chart Card — Gradient border effect */
@@ -254,10 +255,6 @@
   flex-direction: column;
 }
 
-.dashboard-activity-card.full-width {
-  grid-column: 1 / -1;
-}
-
 /* Decorative corner gradient orb */
 .dashboard-activity-card::after {
   content: '';
@@ -463,7 +460,7 @@
 }
 
 @media (max-width: 1024px) {
-  .dashboard-grid {
+  .dashboard-row-2 {
     grid-template-columns: 1fr;
   }
 }

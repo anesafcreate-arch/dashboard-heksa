@@ -1,30 +1,72 @@
+export const APP_ROLES = ['adminutama', 'direktur', 'manager', 'supervisor', 'admin', 'teknisi'];
+
+export const ROLE_LABELS = {
+  adminutama: 'AdminUtama',
+  direktur: 'Direktur',
+  manager: 'Manager',
+  supervisor: 'Supervisor',
+  admin: 'Admin',
+  teknisi: 'Teknisi',
+};
+
+const LEGACY_ROLE_MAP = {
+  superadmin: 'adminutama',
+  adminutama: 'adminutama',
+  direktur: 'direktur',
+  manager: 'manager',
+  managerkeuangan: 'manager',
+  managerpemasaran: 'manager',
+  managermutu: 'manager',
+  supervisor: 'supervisor',
+  admin: 'admin',
+  teknisi: 'teknisi',
+};
+
+const LEGACY_USER_ROLE_MAP = {
+  dian: 'direktur',
+  fida: 'direktur',
+  uko: 'manager',
+  dena: 'supervisor',
+  amel: 'admin',
+  hilal: 'teknisi',
+};
+
 export const normalizeRole = (role) => String(role || '').toLowerCase().trim();
 
-export const isManagerRole = (role) => normalizeRole(role).startsWith('manager');
+export const resolveRole = (role, email = '') => {
+  const roleKey = normalizeRole(role);
 
-export const canAccessSettings = (role) =>
-  ['direktur', 'managerkeuangan', 'managerpemasaran'].includes(normalizeRole(role));
+  if (APP_ROLES.includes(roleKey)) return roleKey;
+
+  const mappedRole = LEGACY_ROLE_MAP[roleKey];
+  if (mappedRole) return mappedRole;
+
+  const username = String(email || '').split('@')[0].toLowerCase().trim();
+  return LEGACY_USER_ROLE_MAP[username] || 'teknisi';
+};
+
+export const toRoleLabel = (role) => ROLE_LABELS[resolveRole(role)] || 'Teknisi';
+
+export const isSuperAdmin = (role) => resolveRole(role) === 'adminutama';
+
+export const canAccessSettings = (role) => resolveRole(role) === 'adminutama';
 
 export const canManageJadwalOnsite = (role) => {
-  const roleKey = normalizeRole(role);
-  return roleKey === 'direktur' || isManagerRole(roleKey);
+  const finalRole = resolveRole(role);
+  return finalRole === 'adminutama' || finalRole === 'direktur' || finalRole === 'manager';
 };
 
-export const roleMatches = (role, allowedRole) => {
-  const roleKey = normalizeRole(role);
-  const allowedKey = normalizeRole(allowedRole);
+export const roleMatches = (role, allowedRole) => resolveRole(role) === resolveRole(allowedRole);
 
-  if (allowedKey === 'manager') {
-    return isManagerRole(roleKey);
-  }
+export const isRoleAllowed = (role, allowedRoles = []) => {
+  const finalRole = resolveRole(role);
 
-  return roleKey === allowedKey;
+  if (finalRole === 'adminutama') return true;
+
+  return (
+    Array.isArray(allowedRoles) &&
+    allowedRoles.some((allowedRole) => roleMatches(finalRole, allowedRole))
+  );
 };
 
-export const isRoleAllowed = (role, allowedRoles = []) =>
-  Array.isArray(allowedRoles) && allowedRoles.some((allowedRole) => roleMatches(role, allowedRole));
-
-export const getRoleGroup = (role) => {
-  const roleKey = normalizeRole(role);
-  return isManagerRole(roleKey) ? 'manager' : roleKey;
-};
+export const getRoleGroup = (role) => resolveRole(role);

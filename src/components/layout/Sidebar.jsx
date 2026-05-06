@@ -2,53 +2,11 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Database, LogOut, Settings, CalendarDays } from 'lucide-react';
 import AlatKeluarIcon from '../ui/AlatKeluarIcon';
 import { useAuth } from '../../context/AuthContext';
-import { canAccessSettings, getRoleGroup, normalizeRole } from '../../utils/roles';
 import './Sidebar.css';
-
-const MENU_ITEMS = {
-  admin: [
-    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
-    { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
-    { path: '/jadwal-onsite', label: 'Jadwal Onsite', icon: <CalendarDays size={20} /> },
-    { path: '/database', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
-  ],
-  teknisi: [
-    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
-    { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
-    { path: '/jadwal-onsite', label: 'Jadwal Onsite', icon: <CalendarDays size={20} /> },
-  ],
-  direktur: [
-    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
-    { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
-    { path: '/jadwal-onsite', label: 'Jadwal Onsite', icon: <CalendarDays size={20} /> },
-    { path: '/database', label: 'Summary Kalibrasi', icon: <Database size={20} /> },
-  ],
-  manager: [
-    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/alat-masuk', label: 'Alat Masuk', icon: <Package size={20} /> },
-    { path: '/alat-keluar', label: 'Alat Keluar', icon: <AlatKeluarIcon size={20} /> },
-    { path: '/jadwal-onsite', label: 'Jadwal Onsite', icon: <CalendarDays size={20} /> },
-  ],
-};
 
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const { user, logout } = useAuth();
-  // Normalisasi role agar aman dari case/spasi (contoh: "Admin", "admin ", dll)
-  const roleKey = normalizeRole(user?.role);
-  const roleGroup = getRoleGroup(roleKey);
-  const menuItems = [
-    ...(MENU_ITEMS[roleGroup] || []),
-    ...(canAccessSettings(roleKey)
-      ? [{ path: '/settings', label: 'Pengaturan', icon: <Settings size={20} />, section: 'Pengaturan' }]
-      : []),
-  ];
-
-  // Separate main menu from settings
-  const mainItems = menuItems.filter((item) => !item.section);
-  const settingsItems = menuItems.filter((item) => item.section);
+  const role = user?.role?.toLowerCase();
 
   return (
     <>
@@ -64,38 +22,79 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
 
         <nav className="sidebar-nav">
           <div className="sidebar-section-label">Menu Utama</div>
-          {mainItems.map((item) => (
+
+          {role !== 'teknisi' && (
             <NavLink
-              key={item.path}
-              to={item.path}
+              to="/dashboard"
               className={({ isActive }) =>
                 `sidebar-nav-item ${isActive ? 'active' : ''}`
               }
               onClick={onClose}
             >
-              <span className="sidebar-nav-icon">{item.icon}</span>
-              {item.label}
+              <span className="sidebar-nav-icon"><LayoutDashboard size={20} /></span>
+              Dashboard
             </NavLink>
-          ))}
+          )}
 
-          {settingsItems.length > 0 && (
+          <NavLink
+            to="/alat-masuk"
+            className={({ isActive }) =>
+              `sidebar-nav-item ${isActive ? 'active' : ''}`
+            }
+            onClick={onClose}
+          >
+            <span className="sidebar-nav-icon"><Package size={20} /></span>
+            Alat Masuk
+          </NavLink>
+
+          <NavLink
+            to="/status-alat"
+            className={({ isActive }) =>
+              `sidebar-nav-item ${isActive ? 'active' : ''}`
+            }
+            onClick={onClose}
+          >
+            <span className="sidebar-nav-icon"><AlatKeluarIcon size={20} /></span>
+            Status Alat
+          </NavLink>
+
+          <NavLink
+            to="/jadwal-onsite"
+            className={({ isActive }) =>
+              `sidebar-nav-item ${isActive ? 'active' : ''}`
+            }
+            onClick={onClose}
+          >
+            <span className="sidebar-nav-icon"><CalendarDays size={20} /></span>
+            Jadwal Onsite
+          </NavLink>
+
+          <NavLink
+            to="/database"
+            className={({ isActive }) =>
+              `sidebar-nav-item ${isActive ? 'active' : ''}`
+            }
+            onClick={onClose}
+          >
+            <span className="sidebar-nav-icon"><Database size={20} /></span>
+            Summary Kalibrasi
+          </NavLink>
+
+          {role === 'adminutama' && (
             <>
               <div className="sidebar-section-label" style={{ marginTop: '16px' }}>
                 Pengaturan
               </div>
-              {settingsItems.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? 'active' : ''}`
-                  }
-                  onClick={onClose}
-                >
-                  <span className="sidebar-nav-icon">{item.icon}</span>
-                  {item.label}
-                </NavLink>
-              ))}
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  `sidebar-nav-item ${isActive ? 'active' : ''}`
+                }
+                onClick={onClose}
+              >
+                <span className="sidebar-nav-icon"><Settings size={20} /></span>
+                Pengaturan
+              </NavLink>
             </>
           )}
         </nav>

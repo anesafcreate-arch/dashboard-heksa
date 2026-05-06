@@ -5,12 +5,14 @@ import DataTable from '../components/ui/DataTable';
 import Modal, { ConfirmDialog } from '../components/ui/Modal';
 import { Database, Plus, Edit, Trash2, Save, Eye } from 'lucide-react';
 import { JENIS_LAYANAN } from '../data/mockData';
+import { resolveRole } from '../utils/roles';
 import './PageStyles.css';
 
 export default function DatabasePage() {
   const { user } = useAuth();
   const { databaseKalibrasi, addDatabase, editDatabase, deleteDatabase } = useData();
-  const isAdmin = String(user?.role || '').toLowerCase().trim() === 'admin';
+  const roleName = resolveRole(user?.role, user?.email);
+  const canManage = roleName === 'adminutama' || roleName === 'admin';
 
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -69,7 +71,7 @@ export default function DatabasePage() {
       accessor: 'kategori',
       render: (row) => <span className="badge info">{row.kategori}</span>,
     },
-    ...(isAdmin
+    ...(canManage
       ? [
           {
             header: 'Aksi',
@@ -104,12 +106,12 @@ export default function DatabasePage() {
           <Database size={28} color="var(--color-primary)" /> Summary Kalibrasi
         </h1>
         <div className="page-header-actions">
-          {!isAdmin && (
+          {!canManage && (
             <span className="badge info" style={{ fontSize: '0.78rem', padding: '5px 14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Eye size={14} /> Mode Lihat Saja
             </span>
           )}
-          {isAdmin && (
+          {canManage && (
             <button className="btn-primary" onClick={openAdd} id="btn-tambah-db" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Plus size={16} /> Tambah Alat
             </button>

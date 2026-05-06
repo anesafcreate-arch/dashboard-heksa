@@ -6,15 +6,16 @@ import { ConfirmDialog } from '../components/ui/Modal';
 import { Eye } from 'lucide-react';
 import AlatKeluarIcon from '../components/ui/AlatKeluarIcon';
 import { STATUS_KALIBRASI } from '../data/mockData';
+import { resolveRole } from '../utils/roles';
 import './PageStyles.css';
 
 export default function AlatKeluarPage() {
   const { user } = useAuth();
   const { alatKeluar, updateStatus } = useData();
 
-  const roleKey = String(user?.role || '').toLowerCase().trim();
-  // Admin + Teknisi bisa update milestone; Direktur view-only
-  const canEdit = roleKey === 'admin' || roleKey === 'teknisi';
+  const roleName = resolveRole(user?.role, user?.email);
+  // Admin + Teknisi bisa update milestone; role lain view-only.
+  const canEdit = roleName === 'adminutama' || roleName === 'admin' || roleName === 'teknisi';
 
   const [statusConfirm, setStatusConfirm] = useState(null);
 
@@ -91,7 +92,7 @@ export default function AlatKeluarPage() {
     <div className="page-container">
       <div className="page-header">
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <AlatKeluarIcon size={28} color="var(--color-brand-accent)" /> Alat Keluar
+          <AlatKeluarIcon size={28} color="var(--color-brand-accent)" /> Status Alat
         </h1>
         {!canEdit && (
           <span className="badge info" style={{ fontSize: '0.78rem', padding: '5px 14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -105,7 +106,7 @@ export default function AlatKeluarPage() {
         data={alatKeluar}
         searchPlaceholder="Cari kode, nama, atau jenis layanan..."
         emptyIcon={<AlatKeluarIcon size={32} color="var(--color-text-muted)" />}
-        emptyText="Belum ada alat keluar"
+        emptyText="Belum ada data status alat"
       />
 
       <ConfirmDialog

@@ -1,24 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Settings, UserPlus, Lock, Eye, EyeOff, Trash2, Shield, User, CheckCircle, AlertCircle, Save, Plus } from 'lucide-react';
+import { Settings, UserPlus, Lock, Eye, EyeOff, Shield, User, CheckCircle, AlertCircle, Save, Plus } from 'lucide-react';
 import { supabase, supabaseSignupClient } from '../supabaseClient';
 import DataTable from '../components/ui/DataTable';
-import Modal, { ConfirmDialog } from '../components/ui/Modal';
-import { canAccessSettings, getRoleGroup, normalizeRole } from '../utils/roles';
+import Modal from '../components/ui/Modal';
+import { APP_ROLES, canAccessSettings, getRoleGroup, normalizeRole, resolveRole, toRoleLabel } from '../utils/roles';
 import './SettingsPage.css';
 
-const ROLE_OPTIONS = [
-  { value: 'admin', label: 'admin' },
-  { value: 'managermutu', label: 'managermutu' },
-  { value: 'managerkeuangan', label: 'managerkeuangan' },
-  { value: 'managerpemasaran', label: 'managerpemasaran' },
-  { value: 'teknisi', label: 'teknisi' },
-  { value: 'direktur', label: 'direktur' },
-  { value: 'disabled', label: 'disabled' },
-];
+const ROLE_OPTIONS = APP_ROLES.map((role) => ({ value: role, label: toRoleLabel(role) }));
 
 const EMPTY_USER_FORM = {
-  namaLengkap: '',
   username: '',
   password: '',
   role: 'teknisi',
@@ -40,23 +31,21 @@ export default function SettingsPage() {
   const [profiles, setProfiles] = useState([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [profilesMsg, setProfilesMsg] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [newUser, setNewUser] = useState(EMPTY_USER_FORM);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  const roleKey = normalizeRole(user?.role);
-  const canManageUsers = canAccessSettings(roleKey);
+  const canManageUsers = canAccessSettings(user?.role);
 
-  const fetchProfiles = async () => {
+  const fetchProfiles = useCallback(async () => {
     if (!canManageUsers) return;
     setProfilesLoading(true);
     setProfilesMsg(null);
     try {
       const { data, error } = await supabase
-        .from('Profile')
-        .select('*')
-        .order('nama_lengkap', { ascending: true });
+        .from('profiles')
+        .select('id,email,role,created_at')
+        .order('email', { ascending: true });
       if (error) throw error;
       setProfiles(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -64,12 +53,11 @@ export default function SettingsPage() {
     } finally {
       setProfilesLoading(false);
     }
-  };
+  }, [canManageUsers]);
 
   useEffect(() => {
     if (activeTab === 'users') fetchProfiles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, canManageUsers]);
+  }, [activeTab, canManageUsers, fetchProfiles]);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -108,44 +96,32 @@ export default function SettingsPage() {
     }
   };
 
-  const updateProfile = async (id, patch) => {
+  const updateProfile = useCallback(async (id, patch) => {
     if (!canManageUsers) return;
     setProfilesMsg(null);
     try {
-      const { error } = await supabase.from('Profile').update(patch).eq('id', id);
+      const { error } = await supabase.from('profiles').update(patch).eq('id', id);
       if (error) throw error;
       await fetchProfiles();
       setProfilesMsg({ type: 'success', text: 'Perubahan user tersimpan.' });
     } catch (err) {
       setProfilesMsg({ type: 'error', text: err?.message || 'Gagal menyimpan perubahan user.' });
     }
-  };
-
-  const requestDisableUser = (profileId) => {
-    if (profileId === user?.id) return;
-    setDeleteConfirm(profileId);
-  };
-
-  const confirmDisable = async () => {
-    if (!deleteConfirm) return;
-    const id = deleteConfirm;
-    setDeleteConfirm(null);
-    await updateProfile(id, { role: 'disabled' });
-  };
+  }, [canManageUsers, fetchProfiles]);
 
   const getRoleBadge = (role) => {
     const colors = {
-      admin: 'blue',
-      teknisi: 'amber',
+      adminutama: 'green',
       direktur: 'green',
       manager: 'blue',
-      disabled: 'gray',
+      supervisor: 'blue',
+      admin: 'blue',
+      teknisi: 'amber',
     };
     return colors[getRoleGroup(role)] || 'blue';
   };
 
   const getProfileUsername = (profile) => {
-    if (profile?.username) return profile.username;
     if (profile?.email) return String(profile.email).replace(/@heksa\.com$/i, '');
     return String(profile?.id || '').slice(0, 8);
   };
@@ -162,8 +138,8 @@ export default function SettingsPage() {
 
     const username = toUsername(newUser.username);
     const email = `${username}@heksa.com`;
-    if (!newUser.namaLengkap.trim() || !username || !newUser.password || !newUser.role) {
-      setProfilesMsg({ type: 'error', text: 'Nama lengkap, username, password, dan role wajib diisi.' });
+    if (!username || !newUser.password || !newUser.role) {
+      setProfilesMsg({ type: 'error', text: 'Username, password, dan role wajib diisi.' });
       return;
     }
     if (newUser.password.length < 6) {
@@ -178,8 +154,6 @@ export default function SettingsPage() {
         password: newUser.password,
         options: {
           data: {
-            nama_lengkap: newUser.namaLengkap.trim(),
-            username,
             role: newUser.role,
           },
         },
@@ -188,19 +162,12 @@ export default function SettingsPage() {
 
       const createdUserId = signUpData?.user?.id;
       if (createdUserId) {
-        const payload = {
+        const { error: profileError } = await supabase.from('profiles').upsert({
           id: createdUserId,
-          nama_lengkap: newUser.namaLengkap.trim(),
-          username,
-          role: newUser.role,
-        };
-        const { error: profileError } = await supabase.from('Profile').upsert(payload);
-        if (profileError) {
-          const fallbackPayload = { ...payload };
-          delete fallbackPayload.username;
-          const { error: fallbackError } = await supabase.from('Profile').upsert(fallbackPayload);
-          if (fallbackError) throw fallbackError;
-        }
+          email,
+          role: resolveRole(newUser.role, email),
+        });
+        if (profileError) throw profileError;
       }
 
       closeUserModal();
@@ -215,14 +182,14 @@ export default function SettingsPage() {
 
   const userColumns = useMemo(() => [
     {
-      header: 'Nama Lengkap',
-      accessor: 'nama_lengkap',
+      header: 'Email',
+      accessor: 'email',
       render: (row) => (
         <div className="settings-table-user">
           <div className="settings-user-avatar">
             <User size={18} />
           </div>
-          <span>{row.nama_lengkap || '-'}</span>
+          <span>{row.email || '-'}</span>
         </div>
       ),
     },
@@ -237,12 +204,12 @@ export default function SettingsPage() {
       render: (row) => (
         <div className="settings-role-cell">
           <span className={`settings-role-badge ${getRoleBadge(row.role)}`}>
-            {String(row.role || '-')}
+            {toRoleLabel(resolveRole(row.role, row.email))}
           </span>
           {canManageUsers && (
             <select
               className="form-select settings-role-select"
-              value={normalizeRole(row.role)}
+              value={resolveRole(row.role, row.email)}
               onChange={(e) => updateProfile(row.id, { role: e.target.value })}
             >
               {ROLE_OPTIONS.map((option) => (
@@ -253,24 +220,7 @@ export default function SettingsPage() {
         </div>
       ),
     },
-    {
-      header: 'Aksi',
-      width: '90px',
-      render: (row) => (
-        canManageUsers && row.id !== user?.id ? (
-          <button
-            className="settings-delete-btn"
-            onClick={() => requestDisableUser(row.id)}
-            title="Nonaktifkan User"
-          >
-            <Trash2 size={15} />
-          </button>
-        ) : (
-          <span className="settings-action-muted">-</span>
-        )
-      ),
-    },
-  ], [canManageUsers, user?.id]);
+  ], [canManageUsers, updateProfile]);
 
   return (
     <div className="page-container settings-page">
@@ -387,10 +337,10 @@ export default function SettingsPage() {
             </div>
 
             {!canManageUsers ? (
-              <div className="settings-message error">
-                <AlertCircle size={16} />
-                Fitur ini hanya untuk Direktur, Manager Keuangan, dan Manager Pemasaran.
-              </div>
+            <div className="settings-message error">
+              <AlertCircle size={16} />
+              Fitur ini hanya untuk AdminUtama.
+            </div>
             ) : (
               <>
                 {profilesMsg && (
@@ -402,7 +352,7 @@ export default function SettingsPage() {
                 <DataTable
                   columns={userColumns}
                   data={profiles}
-                  searchPlaceholder="Cari nama, username, atau role..."
+                  searchPlaceholder="Cari email atau role..."
                   emptyIcon={<User size={32} color="var(--color-text-muted)" />}
                   emptyText="Belum ada user"
                 />
@@ -430,17 +380,6 @@ export default function SettingsPage() {
         }
       >
         <form className="settings-user-modal-form" onSubmit={handleCreateUser}>
-          <div className="form-group">
-            <label className="form-label">Nama Lengkap *</label>
-            <input
-              className="form-input"
-              type="text"
-              placeholder="Nama lengkap user"
-              value={newUser.namaLengkap}
-              onChange={(e) => setNewUser({ ...newUser, namaLengkap: e.target.value })}
-            />
-          </div>
-
           <div className="form-group">
             <label className="form-label">Username/ID *</label>
             <div className="settings-username-modal-cell">
@@ -473,7 +412,7 @@ export default function SettingsPage() {
               value={newUser.role}
               onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             >
-              {ROLE_OPTIONS.filter((option) => option.value !== 'disabled').map((option) => (
+              {ROLE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
@@ -486,15 +425,6 @@ export default function SettingsPage() {
           </div>
         )}
       </Modal>
-
-      <ConfirmDialog
-        isOpen={!!deleteConfirm}
-        onClose={() => setDeleteConfirm(null)}
-        onConfirm={confirmDisable}
-        title="Nonaktifkan User?"
-        message="User tidak akan bisa masuk sampai role diaktifkan lagi."
-        confirmText="Ya, Nonaktifkan"
-      />
     </div>
   );
 }
