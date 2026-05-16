@@ -12,13 +12,33 @@ create table if not exists public.alat_kalibrasi (
   jenis_layanan text not null,
   tanggal_masuk date not null default current_date,
   status_kalibrasi text not null default 'MENUNGGU'
-    check (status_kalibrasi in ('MENUNGGU', 'PROSES', 'SELESAI', 'DIAMBIL')),
+    check (status_kalibrasi in ('MENUNGGU', 'PROSES', 'DIBATALKAN', 'DIAMBIL', 'SELESAI')),
   tanggal_diambil date null,
   dokumen_nama text null,
   created_by uuid null default auth.uid() references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.alat_kalibrasi
+  drop constraint if exists alat_kalibrasi_status_kalibrasi_check;
+
+alter table public.alat_kalibrasi
+  add constraint alat_kalibrasi_status_kalibrasi_check
+  check (status_kalibrasi in ('MENUNGGU', 'PROSES', 'DIBATALKAN', 'DIAMBIL', 'SELESAI'));
+
+alter table public.alat_kalibrasi
+  add column if not exists no_order text,
+  add column if not exists spesifikasi text,
+  add column if not exists jumlah integer,
+  add column if not exists lab text,
+  add column if not exists pesanan_khusus text,
+  add column if not exists remarks text,
+  add column if not exists dokumen text;
+
+update public.alat_kalibrasi
+set no_order = kode_alat
+where no_order is null;
 
 create index if not exists idx_alat_kalibrasi_tanggal_masuk
   on public.alat_kalibrasi (tanggal_masuk desc);
@@ -97,7 +117,7 @@ using (
     select 1
     from public."Profile" p
     where p.id = auth.uid()
-      and lower(trim(p.role)) in ('admin', 'teknisi')
+      and lower(trim(p.role)) in ('adminutama', 'admin', 'teknisi', 'supervisor', 'direktur')
   )
 )
 with check (
@@ -105,7 +125,7 @@ with check (
     select 1
     from public."Profile" p
     where p.id = auth.uid()
-      and lower(trim(p.role)) in ('admin', 'teknisi')
+      and lower(trim(p.role)) in ('adminutama', 'admin', 'teknisi', 'supervisor', 'direktur')
   )
 );
 

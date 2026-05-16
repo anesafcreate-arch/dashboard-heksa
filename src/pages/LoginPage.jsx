@@ -1,15 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Lock, LogIn, Award } from 'lucide-react';
+import { getDefaultAuthedPath } from '../utils/roles';
 import './LoginPage.css';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { login, error, clearError } = useAuth();
+  const { login, error, clearError, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const nextPath = user.defaultPath || getDefaultAuthedPath(user.role);
+    navigate(nextPath, { replace: true });
+  }, [isAuthenticated, navigate, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,14 +31,11 @@ export default function LoginPage() {
     const finalEmail = `${usernameInput}@heksa.com`;
 
     try {
-      const success = await login(finalEmail, password);
-      if (success) {
-        navigate('/dashboard', { replace: true });
-      }
+      await login(finalEmail, password);
     } catch (err) {
-      console.error("Authentication Error:", err);
+      console.error('Authentication Error:', err);
     } finally {
-      setTimeout(() => setIsLoggingIn(false), 300);
+      setIsLoggingIn(false);
     }
   };
 

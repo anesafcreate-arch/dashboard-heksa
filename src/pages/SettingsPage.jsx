@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Settings, UserPlus, Lock, Eye, EyeOff, Shield, User, CheckCircle, AlertCircle, Save, Plus } from 'lucide-react';
 import { supabase, supabaseSignupClient } from '../supabaseClient';
 import DataTable from '../components/ui/DataTable';
 import Modal from '../components/ui/Modal';
-import { APP_ROLES, canAccessSettings, getRoleGroup, normalizeRole, resolveRole, toRoleLabel } from '../utils/roles';
+import { listProfiles, updateProfileRecord, upsertProfileRecord } from '../utils/profileStore';
+import { APP_ROLES, canAccessSettings, getRoleGroup, normalizeRole, toRoleLabel, toStoredRole } from '../utils/roles';
 import './SettingsPage.css';
 
 const ROLE_OPTIONS = APP_ROLES.map((role) => ({ value: role, label: toRoleLabel(role) }));
@@ -19,7 +21,9 @@ const toUsername = (value) => normalizeRole(value).replace(/@.*/, '').replace(/\
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('password');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab = location.pathname.includes('/settings/password') ? 'password' : 'users';
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -29,6 +33,7 @@ export default function SettingsPage() {
   const [pwMessage, setPwMessage] = useState(null);
 
   const [profiles, setProfiles] = useState([]);
+  const [profileTable, setProfileTable] = useState(null);
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [profilesMsg, setProfilesMsg] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -37,23 +42,20 @@ export default function SettingsPage() {
 
   const canManageUsers = canAccessSettings(user?.role);
 
-  const fetchProfiles = useCallback(async () => {
+  const fetchProfiles = useCallback(async (preferredTable = profileTable) => {
     if (!canManageUsers) return;
     setProfilesLoading(true);
     setProfilesMsg(null);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id,email,role,created_at')
-        .order('email', { ascending: true });
-      if (error) throw error;
-      setProfiles(Array.isArray(data) ? data : []);
+      const { profiles: nextProfiles, table } = await listProfiles(preferredTable);
+      setProfiles(nextProfiles);
+      setProfileTable(table);
     } catch (err) {
       setProfilesMsg({ type: 'error', text: err?.message || 'Gagal memuat daftar user.' });
     } finally {
       setProfilesLoading(false);
     }
-  }, [canManageUsers]);
+  }, [canManageUsers, profileTable]);
 
   useEffect(() => {
     if (activeTab === 'users') fetchProfiles();
@@ -100,14 +102,14 @@ export default function SettingsPage() {
     if (!canManageUsers) return;
     setProfilesMsg(null);
     try {
-      const { error } = await supabase.from('profiles').update(patch).eq('id', id);
-      if (error) throw error;
-      await fetchProfiles();
+      const { table } = await updateProfileRecord(id, patch, profileTable);
+      setProfileTable(table);
+      await fetchProfiles(table);
       setProfilesMsg({ type: 'success', text: 'Perubahan user tersimpan.' });
     } catch (err) {
       setProfilesMsg({ type: 'error', text: err?.message || 'Gagal menyimpan perubahan user.' });
     }
-  }, [canManageUsers, fetchProfiles]);
+  }, [canManageUsers, fetchProfiles, profileTable]);
 
   const getRoleBadge = (role) => {
     const colors = {
@@ -122,6 +124,7 @@ export default function SettingsPage() {
   };
 
   const getProfileUsername = (profile) => {
+    if (profile?.username) return profile.username;
     if (profile?.email) return String(profile.email).replace(/@heksa\.com$/i, '');
     return String(profile?.id || '').slice(0, 8);
   };
@@ -149,12 +152,13 @@ export default function SettingsPage() {
 
     setIsCreatingUser(true);
     try {
+      const metadataRole = toStoredRole(newUser.role, 'Profile');
       const { data: signUpData, error: signUpError } = await supabaseSignupClient.auth.signUp({
         email,
         password: newUser.password,
         options: {
           data: {
-            role: newUser.role,
+            role: metadataRole,
           },
         },
       });
@@ -162,12 +166,12 @@ export default function SettingsPage() {
 
       const createdUserId = signUpData?.user?.id;
       if (createdUserId) {
-        const { error: profileError } = await supabase.from('profiles').upsert({
+        const { table } = await upsertProfileRecord({
           id: createdUserId,
           email,
-          role: resolveRole(newUser.role, email),
-        });
-        if (profileError) throw profileError;
+          role: newUser.role,
+        }, profileTable);
+        setProfileTable(table);
       }
 
       closeUserModal();
@@ -202,24 +206,24 @@ export default function SettingsPage() {
       header: 'Role/Kelas',
       accessor: 'role',
       render: (row) => (
-        <div className="settings-role-cell">
-          <span className={`settings-role-badge ${getRoleBadge(row.role)}`}>
-            {toRoleLabel(resolveRole(row.role, row.email))}
-          </span>
-          {canManageUsers && (
-            <select
-              className="form-select settings-role-select"
-              value={resolveRole(row.role, row.email)}
-              onChange={(e) => updateProfile(row.id, { role: e.target.value })}
-            >
-              {ROLE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      ),
-    },
+          <div className="settings-role-cell">
+            <span className={`settings-role-badge ${getRoleBadge(row.role)}`}>
+              {toRoleLabel(row.role)}
+            </span>
+            {canManageUsers && (
+              <select
+                className="form-select settings-role-select"
+                value={row.role}
+                onChange={(e) => updateProfile(row.id, { role: e.target.value })}
+              >
+                {ROLE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        ),
+      },
   ], [canManageUsers, updateProfile]);
 
   return (
@@ -233,13 +237,13 @@ export default function SettingsPage() {
       <div className="settings-tabs">
         <button
           className={`settings-tab ${activeTab === 'password' ? 'active' : ''}`}
-          onClick={() => setActiveTab('password')}
+          onClick={() => navigate('/settings/password')}
         >
           <Lock size={16} /> Ganti Password
         </button>
         <button
           className={`settings-tab ${activeTab === 'users' ? 'active' : ''}`}
-          onClick={() => setActiveTab('users')}
+          onClick={() => navigate('/settings/users')}
         >
           <UserPlus size={16} /> Manajemen User
         </button>

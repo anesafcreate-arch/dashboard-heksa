@@ -19,10 +19,15 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
   role public.user_role not null default 'Teknisi',
+  username text null,
+  is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
 create index if not exists idx_profiles_role on public.profiles(role);
+create unique index if not exists idx_profiles_username_unique
+  on public.profiles (lower(trim(username)))
+  where username is not null and trim(username) <> '';
 
 create or replace function public.resolve_role_from_email_and_metadata(
   p_email text,
@@ -100,3 +105,48 @@ on conflict (id) do update
 set
   email = excluded.email,
   role = excluded.role;
+
+create or replace function public.current_profile_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select lower(trim(role::text))
+  from public.profiles
+  where id = auth.uid()
+  limit 1
+$$;
+
+grant execute on function public.current_profile_role() to authenticated;
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "profiles_select_authenticated" on public.profiles;
+create policy "profiles_select_authenticated"
+on public.profiles
+for select
+to authenticated
+using (true);
+
+drop policy if exists "profiles_insert_superadmin" on public.profiles;
+create policy "profiles_insert_superadmin"
+on public.profiles
+for insert
+to authenticated
+with check (
+  public.current_profile_role() = 'superadmin'
+);
+
+drop policy if exists "profiles_update_superadmin" on public.profiles;
+create policy "profiles_update_superadmin"
+on public.profiles
+for update
+to authenticated
+using (
+  public.current_profile_role() = 'superadmin'
+)
+with check (
+  public.current_profile_role() = 'superadmin'
+);

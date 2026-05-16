@@ -7,6 +7,7 @@ export default function DataTable({
   data,
   searchPlaceholder = 'Cari...',
   toolbarActions,
+  tableScrollClassName = '',
   pageSize = 10,
   emptyIcon = <Inbox size={32} color="var(--color-text-muted)" />,
   emptyText = 'Belum ada data',
@@ -49,6 +50,15 @@ export default function DataTable({
     return pages;
   };
 
+  const getRowKey = (row, idx) => {
+    if (row?.id !== undefined && row?.id !== null) return `id-${row.id}`;
+    if (row?.noOrder) return `no-order-${row.noOrder}`;
+    if (row?.no_order) return `no-order-${row.no_order}`;
+    if (row?.kodeAlat) return `kode-${row.kodeAlat}`;
+    if (row?.kode_alat) return `kode-${row.kode_alat}`;
+    return `row-${startIdx + idx}`;
+  };
+
   return (
     <div className="data-table-wrapper">
       <div className="data-table-toolbar">
@@ -64,13 +74,13 @@ export default function DataTable({
         {toolbarActions && <div className="data-table-actions">{toolbarActions}</div>}
       </div>
 
-      <div className="data-table-scroll">
+      <div className={`data-table-scroll overflow-x-auto ${tableScrollClassName}`.trim()}>
         <table className="data-table">
           <thead>
             <tr>
               <th style={{ width: '50px' }}>No</th>
-              {columns.map((col) => (
-                <th key={col.header} style={col.width ? { width: col.width } : {}}>
+              {columns.map((col, colIdx) => (
+                <th key={col.key || (typeof col.header === 'string' ? col.header : `col-${colIdx}`)} style={col.width ? { width: col.width } : {}}>
                   {col.header}
                 </th>
               ))}
@@ -88,10 +98,10 @@ export default function DataTable({
               </tr>
             ) : (
               paginatedData.map((row, idx) => (
-                <tr key={row.id || idx}>
+                <tr key={getRowKey(row, idx)}>
                   <td>{startIdx + idx + 1}</td>
-                  {columns.map((col) => (
-                    <td key={col.header}>
+                  {columns.map((col, colIdx) => (
+                    <td key={col.key || (typeof col.header === 'string' ? col.header : `cell-${colIdx}`)}>
                       {col.render ? col.render(row) : row[col.accessor]}
                     </td>
                   ))}

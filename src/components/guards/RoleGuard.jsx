@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { isRoleAllowed } from '../../utils/roles';
 
-export default function RoleGuard({ allowedRoles, children }) {
+export default function RoleGuard({ allowedRoles, children, redirectPath = null }) {
   const { user, isAuthenticated, loading } = useAuth();
 
   if (loading) {
@@ -18,6 +18,10 @@ export default function RoleGuard({ allowedRoles, children }) {
   }
 
   if (allowedRoles && !isRoleAllowed(user?.role, allowedRoles)) {
+    if (redirectPath) {
+      return <Navigate to={redirectPath} replace />;
+    }
+
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a', color: 'white' }}>
         <h2>Akses Ditolak</h2>

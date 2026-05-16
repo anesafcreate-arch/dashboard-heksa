@@ -7,8 +7,9 @@ import DashboardPage from './pages/DashboardPage';
 import AlatMasukPage from './pages/AlatMasukPage';
 import AlatKeluarPage from './pages/AlatKeluarPage';
 import JadwalOnsitePage from './pages/JadwalOnsitePage';
-import DatabasePage from './pages/DatabasePage';
+import SummaryKalibrasiPage from './pages/SummaryKalibrasiPage';
 import SettingsPage from './pages/SettingsPage';
+import { getDefaultAuthedPath } from './utils/roles';
 
 const APP_ALLOWED_ROLES = ['adminutama', 'direktur', 'manager', 'supervisor', 'admin', 'teknisi'];
 const DASHBOARD_ALLOWED_ROLES = ['adminutama', 'direktur', 'manager', 'supervisor', 'admin'];
@@ -16,9 +17,7 @@ const SETTINGS_ALLOWED_ROLES = ['adminutama'];
 
 export default function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
-  const role = user?.role?.toLowerCase();
-  const isTeknisi = role === 'teknisi';
-  const defaultAuthedPath = isTeknisi ? '/status-alat' : '/dashboard';
+  const defaultAuthedPath = getDefaultAuthedPath(user?.role);
 
   return (
     <Routes>
@@ -38,7 +37,7 @@ export default function AppRoutes() {
         <Route
           path="/dashboard"
           element={(
-            <RoleGuard allowedRoles={DASHBOARD_ALLOWED_ROLES}>
+            <RoleGuard allowedRoles={DASHBOARD_ALLOWED_ROLES} redirectPath={defaultAuthedPath}>
               <DashboardPage />
             </RoleGuard>
           )}
@@ -48,21 +47,13 @@ export default function AppRoutes() {
         <Route path="/alat-keluar" element={<Navigate to="/status-alat" replace />} />
         <Route path="/barang-keluar" element={<Navigate to="/status-alat" replace />} />
         <Route path="/jadwal-onsite" element={<JadwalOnsitePage />} />
-        <Route path="/database" element={<DatabasePage />} />
+        <Route path="/summary-kalibrasi" element={<SummaryKalibrasiPage />} />
 
         <Route
           path="/settings"
           element={(
             <RoleGuard allowedRoles={SETTINGS_ALLOWED_ROLES}>
-              <SettingsPage />
-            </RoleGuard>
-          )}
-        />
-        <Route
-          path="/settings/umum"
-          element={(
-            <RoleGuard allowedRoles={SETTINGS_ALLOWED_ROLES}>
-              <SettingsPage />
+              <Navigate to="/settings/users" replace />
             </RoleGuard>
           )}
         />

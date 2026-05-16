@@ -63,6 +63,39 @@
 /* Table */
 .data-table-scroll {
   overflow-x: auto;
+  --table-scroll-size: 4px;
+  --table-scroll-track: rgba(15, 23, 42, 0.35);
+  --table-scroll-thumb: rgba(59, 130, 246, 0.42);
+  --table-scroll-thumb-hover: #60a5fa;
+  --table-scroll-glow: rgba(59, 130, 246, 0.68);
+  scrollbar-width: thin;
+  scrollbar-color: var(--table-scroll-thumb) transparent;
+  transition: --table-scroll-size var(--transition-normal);
+}
+
+.data-table-scroll:hover {
+  --table-scroll-size: 10px;
+}
+
+.data-table-scroll::-webkit-scrollbar {
+  height: var(--table-scroll-size);
+}
+
+.data-table-scroll::-webkit-scrollbar-track {
+  background: var(--table-scroll-track);
+  border-radius: 10px;
+}
+
+.data-table-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, rgba(30, 64, 175, 0.78), var(--table-scroll-thumb));
+  border-radius: 10px;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.data-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--table-scroll-thumb-hover);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.85), 0 0 14px var(--table-scroll-glow);
+  transform: scaleY(1.04);
 }
 
 .data-table {

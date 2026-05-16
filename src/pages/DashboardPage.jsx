@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -18,7 +18,6 @@ import {
   CheckCircle,
   BarChart3,
   Activity,
-  MoreHorizontal,
   CalendarDays,
   MapPin,
 } from 'lucide-react';
@@ -32,10 +31,8 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 export default function DashboardPage() {
   const { user } = useAuth();
   const { alatMasuk, alatKeluar, jadwalOnsite } = useData();
-  const [activityFilter, setActivityFilter] = useState('all');
 
   const roleGroup = getRoleGroup(user?.role);
-
   const today = new Date().toISOString().split('T')[0];
 
   const stats = useMemo(() => {
@@ -104,47 +101,14 @@ export default function DashboardPage() {
   };
 
   const recentActivities = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const activities = [];
-
-    alatMasuk
-      .filter((item) => item.tanggalMasuk === todayStr)
-      .forEach((item) => {
-        activities.push({
-          id: `masuk-${item.id}`,
-          type: 'masuk',
-          name: item.namaAlat,
-          kode: item.kodeAlat,
-          date: item.tanggalMasuk,
-          status: 'MASUK',
-          jenisLayanan: item.jenisLayanan,
-        });
-      });
-
-    alatKeluar
-      .filter((item) => item.statusKalibrasi === 'DIAMBIL' && item.tanggalDiambil === todayStr)
-      .forEach((item) => {
-        activities.push({
-          id: `keluar-${item.id}`,
-          type: 'keluar',
-          name: item.namaAlat,
-          kode: item.kodeAlat,
-          date: item.tanggalDiambil,
-          status: 'KELUAR',
-          jenisLayanan: item.jenisLayanan,
-        });
-      });
-
-    activities.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    if (activityFilter === 'masuk') {
-      return activities.filter((a) => a.type === 'masuk').slice(0, 8);
-    }
-    if (activityFilter === 'keluar') {
-      return activities.filter((a) => a.type === 'keluar').slice(0, 8);
-    }
-    return activities.slice(0, 8);
-  }, [alatMasuk, alatKeluar, activityFilter]);
+    const items = Array.isArray(alatMasuk) ? [...alatMasuk] : [];
+    items.sort(
+      (a, b) =>
+        new Date(b.createdAt || b.tanggalMasuk || 0).getTime() -
+        new Date(a.createdAt || a.tanggalMasuk || 0).getTime()
+    );
+    return items.slice(0, 8);
+  }, [alatMasuk]);
 
   const onsiteRows = useMemo(
     () => (Array.isArray(jadwalOnsite) ? jadwalOnsite.slice(0, 8) : []),
@@ -167,10 +131,6 @@ export default function DashboardPage() {
       manager: 'Dashboard Manager',
     };
     return titles[roleGroup] || 'Dashboard';
-  };
-
-  const statusColor = (type) => {
-    return type === 'masuk' ? '#3b82f6' : '#22c55e';
   };
 
   const onsiteStatusClass = (status) => String(status || 'TERJADWAL').toLowerCase();
@@ -267,26 +227,6 @@ export default function DashboardPage() {
               <Activity size={18} />
               <span>Recent Activity</span>
             </div>
-            <div className="activity-filter-tabs">
-              <button
-                className={`activity-tab ${activityFilter === 'all' ? 'active' : ''}`}
-                onClick={() => setActivityFilter('all')}
-              >
-                Semua
-              </button>
-              <button
-                className={`activity-tab ${activityFilter === 'masuk' ? 'active' : ''}`}
-                onClick={() => setActivityFilter('masuk')}
-              >
-                Masuk
-              </button>
-              <button
-                className={`activity-tab ${activityFilter === 'keluar' ? 'active' : ''}`}
-                onClick={() => setActivityFilter('keluar')}
-              >
-                Status Alat
-              </button>
-            </div>
           </div>
 
           <div className="recent-activity-table-wrapper">
@@ -294,10 +234,10 @@ export default function DashboardPage() {
               <thead>
                 <tr>
                   <th>Nama Alat</th>
+                  <th>No. Order</th>
+                  <th>Jumlah</th>
+                  <th>Lab</th>
                   <th>Tanggal</th>
-                  <th>Kode</th>
-                  <th>Status</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -306,31 +246,19 @@ export default function DashboardPage() {
                     <tr key={item.id}>
                       <td>
                         <div className="activity-account-cell">
-                          <span
-                            className="activity-dot-indicator"
-                            style={{ background: statusColor(item.type) }}
-                          />
-                          <span className="activity-account-name">{item.name}</span>
+                          <span className="activity-account-name">{item.namaAlat || '-'}</span>
                         </div>
                       </td>
-                      <td className="activity-date-cell">{formatDateDisplay(item.date)}</td>
-                      <td className="activity-amount-cell">{item.kode}</td>
-                      <td>
-                        <span className={`activity-status-badge ${item.type}`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td>
-                        <button className="activity-more-btn">
-                          <MoreHorizontal size={16} />
-                        </button>
-                      </td>
+                      <td className="activity-order-cell">{item.noOrder || item.kodeAlat || '-'}</td>
+                      <td className="activity-amount-cell">{(item.jumlah ?? '') !== '' ? item.jumlah : '-'}</td>
+                      <td className="activity-lab-cell">{item.lab || '-'}</td>
+                      <td className="activity-date-cell">{formatDateDisplay(item.tanggalMasuk)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td colSpan="5" className="activity-empty-cell">
-                      Tidak ada aktivitas yang sesuai.
+                      Tidak ada aktivitas terbaru.
                     </td>
                   </tr>
                 )}

@@ -31,6 +31,25 @@ const LEGACY_USER_ROLE_MAP = {
   hilal: 'teknisi',
 };
 
+const PROFILE_STORAGE_ROLE_MAP = {
+  profiles: {
+    adminutama: 'SuperAdmin',
+    direktur: 'Direktur',
+    manager: 'Manager',
+    supervisor: 'Supervisor',
+    admin: 'Admin',
+    teknisi: 'Teknisi',
+  },
+  Profile: {
+    adminutama: 'superadmin',
+    direktur: 'direktur',
+    manager: 'manager',
+    supervisor: 'supervisor',
+    admin: 'admin',
+    teknisi: 'teknisi',
+  },
+};
+
 export const normalizeRole = (role) => String(role || '').toLowerCase().trim();
 
 export const resolveRole = (role, email = '') => {
@@ -51,6 +70,10 @@ export const isSuperAdmin = (role) => resolveRole(role) === 'adminutama';
 
 export const canAccessSettings = (role) => resolveRole(role) === 'adminutama';
 
+export const canAccessDashboard = (role) => resolveRole(role) !== 'teknisi';
+
+export const getDefaultAuthedPath = (role) => (canAccessDashboard(role) ? '/dashboard' : '/status-alat');
+
 export const canManageJadwalOnsite = (role) => {
   const finalRole = resolveRole(role);
   return finalRole === 'adminutama' || finalRole === 'direktur' || finalRole === 'manager';
@@ -70,3 +93,8 @@ export const isRoleAllowed = (role, allowedRoles = []) => {
 };
 
 export const getRoleGroup = (role) => resolveRole(role);
+
+export const toStoredRole = (role, tableName = 'profiles') => {
+  const finalRole = resolveRole(role);
+  return PROFILE_STORAGE_ROLE_MAP[tableName]?.[finalRole] || PROFILE_STORAGE_ROLE_MAP.Profile[finalRole] || finalRole;
+};

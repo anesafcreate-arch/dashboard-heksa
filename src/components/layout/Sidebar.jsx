@@ -2,11 +2,12 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Database, LogOut, Settings, CalendarDays } from 'lucide-react';
 import AlatKeluarIcon from '../ui/AlatKeluarIcon';
 import { useAuth } from '../../context/AuthContext';
+import { canAccessDashboard, canAccessSettings, resolveRole } from '../../utils/roles';
 import './Sidebar.css';
 
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const { user, logout } = useAuth();
-  const role = user?.role?.toLowerCase();
+  const role = resolveRole(user?.role, user?.email);
 
   return (
     <>
@@ -23,7 +24,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         <nav className="sidebar-nav">
           <div className="sidebar-section-label">Menu Utama</div>
 
-          {role !== 'teknisi' && (
+          {canAccessDashboard(role) && (
             <NavLink
               to="/dashboard"
               className={({ isActive }) =>
@@ -70,7 +71,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
           </NavLink>
 
           <NavLink
-            to="/database"
+            to="/summary-kalibrasi"
             className={({ isActive }) =>
               `sidebar-nav-item ${isActive ? 'active' : ''}`
             }
@@ -80,13 +81,13 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
             Summary Kalibrasi
           </NavLink>
 
-          {role === 'adminutama' && (
+          {canAccessSettings(role) && (
             <>
               <div className="sidebar-section-label" style={{ marginTop: '16px' }}>
                 Pengaturan
               </div>
               <NavLink
-                to="/settings"
+                to="/settings/users"
                 className={({ isActive }) =>
                   `sidebar-nav-item ${isActive ? 'active' : ''}`
                 }

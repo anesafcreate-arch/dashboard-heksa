@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { resolveRole } from '../utils/roles';
+import { getProfileById, upsertProfileRecord } from '../utils/profileStore';
+import { getDefaultAuthedPath, resolveRole } from '../utils/roles';
 
 const AuthContext = createContext(null);
 
@@ -15,9 +16,15 @@ const initialState = {
 function authReducer(state, action) {
   switch (action.type) {
     case 'INITIALIZE':
-      return { ...state, user: action.payload.user, isAuthenticated: !!action.payload.user, loading: false };
+      return {
+        ...state,
+        user: action.payload.user,
+        isAuthenticated: !!action.payload.user,
+        error: null,
+        loading: false,
+      };
     case 'LOGIN_SUCCESS':
-      return { ...state, user: action.payload, isAuthenticated: true, error: null };
+      return { ...state, user: action.payload, isAuthenticated: true, error: null, loading: false };
     case 'LOGIN_FAILURE':
       return { ...state, error: action.payload, loading: false };
     case 'LOGOUT':
@@ -34,34 +41,70 @@ function authReducer(state, action) {
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  const getProfileByUser = useCallback(async (authUser) => {
+  const buildUserPayload = useCallback(async (authUser) => {
     if (!authUser?.id) return null;
 
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id,email,role,created_at')
-      .eq('id', authUser.id)
-      .maybeSingle();
+    const { profile, table } = await getProfileById(authUser.id);
+    const email = profile?.email || authUser.email || '';
+    const finalRole = resolveRole(profile?.role || authUser.user_metadata?.role, email);
 
-    const email = profileData?.email || authUser.email || '';
-    const finalRole = resolveRole(profileData?.role, email);
+    if (!profile && authUser.id && email) {
+      try {
+        await upsertProfileRecord({
+          id: authUser.id,
+          email,
+          role: finalRole,
+        }, table);
+      } catch {
+        // Biarkan login tetap jalan walau sinkronisasi profil gagal.
+      }
+    }
 
     return {
       id: authUser.id,
       email,
-      nama_lengkap: authUser.user_metadata?.nama_lengkap || email.split('@')[0],
+      username: profile?.username || email.split('@')[0],
+      nama_lengkap:
+        authUser.user_metadata?.nama_lengkap
+        || authUser.user_metadata?.full_name
+        || profile?.username
+        || email.split('@')[0],
       role: finalRole,
+      defaultPath: getDefaultAuthedPath(finalRole),
+      isActive: profile?.isActive ?? true,
     };
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const syncSessionUser = async (sessionUser) => {
+      try {
+        const userPayload = await buildUserPayload(sessionUser);
+
+        if (!isMounted) return;
+
+        if (userPayload && userPayload.isActive === false) {
+          await supabase.auth.signOut();
+          dispatch({ type: 'LOGIN_FAILURE', payload: 'Akun ini dinonaktifkan. Hubungi AdminUtama.' });
+          dispatch({ type: 'LOGOUT' });
+          return;
+        }
+
+        dispatch({ type: 'INITIALIZE', payload: { user: userPayload } });
+      } catch {
+        if (isMounted) {
+          dispatch({ type: 'INITIALIZE', payload: { user: null } });
+        }
+      }
+    };
+
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user) {
-          const userPayload = await getProfileByUser(session.user);
-          dispatch({ type: 'INITIALIZE', payload: { user: userPayload } });
+          await syncSessionUser(session.user);
         } else {
           dispatch({ type: 'INITIALIZE', payload: { user: null } });
         }
@@ -72,17 +115,21 @@ export function AuthProvider({ children }) {
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        const userPayload = await getProfileByUser(session.user);
-        dispatch({ type: 'INITIALIZE', payload: { user: userPayload } });
+        window.setTimeout(() => {
+          void syncSessionUser(session.user);
+        }, 0);
       } else {
         dispatch({ type: 'LOGOUT' });
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [getProfileByUser]);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [buildUserPayload]);
 
   const login = useCallback(async (email, password) => {
     try {
@@ -92,19 +139,31 @@ export function AuthProvider({ children }) {
       });
       if (authError) throw authError;
 
-      const userPayload = await getProfileByUser(authData.user);
+      const userPayload = await buildUserPayload(authData.user);
+
+      if (!userPayload) {
+        throw new Error('Data user tidak ditemukan setelah login.');
+      }
+
+      if (userPayload.isActive === false) {
+        await supabase.auth.signOut();
+        throw new Error('Akun ini dinonaktifkan. Hubungi AdminUtama.');
+      }
 
       dispatch({ type: 'LOGIN_SUCCESS', payload: userPayload });
-      return true;
+      return userPayload;
     } catch (err) {
       dispatch({ type: 'LOGIN_FAILURE', payload: err.message });
-      return false;
+      return null;
     }
-  }, [getProfileByUser]);
+  }, [buildUserPayload]);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
-    dispatch({ type: 'LOGOUT' });
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      dispatch({ type: 'LOGOUT' });
+    }
   }, []);
 
   const clearError = useCallback(() => {

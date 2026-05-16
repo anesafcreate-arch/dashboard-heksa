@@ -10,5 +10,6 @@ export const supabaseSignupClient = createClient(supabaseUrl, supabaseKey, {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false,
+    storageKey: 'sb-dashboard-heksa-signup-helper',
   },
 });

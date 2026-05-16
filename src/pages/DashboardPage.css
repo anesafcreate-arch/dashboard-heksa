@@ -1,9 +1,11 @@
 .dashboard-page {
   animation: fadeInUp 500ms ease forwards;
+  display: grid;
+  gap: var(--space-lg);
 }
 
 .dashboard-header {
-  margin-bottom: var(--space-xl);
+  margin-bottom: 0;
 }
 
 .dashboard-header h1 {
@@ -25,17 +27,16 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--space-lg);
-  margin-bottom: var(--space-xl);
 }
 
 .dashboard-row-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   gap: var(--space-lg);
+  align-items: stretch;
 }
 
 .dashboard-row-3 {
-  margin-top: var(--space-lg);
   width: 100%;
 }
 
@@ -47,6 +48,8 @@
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
   overflow: hidden;
+  min-width: 0;
+  box-shadow: var(--shadow-card);
 }
 
 .dashboard-chart-card::before {
@@ -88,6 +91,8 @@
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
   overflow: hidden;
+  min-width: 0;
+  box-shadow: var(--shadow-card);
 }
 
 .dashboard-onsite-card.grid-card {
@@ -253,6 +258,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  box-shadow: var(--shadow-card);
 }
 
 /* Decorative corner gradient orb */
@@ -396,6 +403,13 @@
 
 .activity-date-cell {
   color: var(--color-text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.activity-order-cell,
+.activity-lab-cell {
+  color: var(--color-text-secondary);
   font-size: 0.82rem;
   white-space: nowrap;
 }
