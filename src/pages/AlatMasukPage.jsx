@@ -51,6 +51,7 @@ export default function AlatMasukPage() {
   const serviceFilterRef = useRef(null);
   const fileInputRef = useRef(null);
   const notificationAudioRef = useRef(null);
+  const audioPrimedRef = useRef(false);
   const [file, setFile] = useState(null);
   const [existingDocumentName, setExistingDocumentName] = useState('');
   const [fileError, setFileError] = useState('');
@@ -75,13 +76,45 @@ export default function AlatMasukPage() {
     const audio = new Audio('/notifku.wav');
     audio.preload = 'auto';
     notificationAudioRef.current = audio;
+    audioPrimedRef.current = false;
 
     return () => {
       if (notificationAudioRef.current) {
         notificationAudioRef.current.pause();
         notificationAudioRef.current = null;
       }
+      audioPrimedRef.current = false;
     };
+  }, []);
+
+  const primeNotificationSound = useCallback(() => {
+    if (audioPrimedRef.current) return;
+
+    const audio = notificationAudioRef.current;
+    if (!audio) return;
+
+    const previousMuted = audio.muted;
+    audio.muted = true;
+
+    const unlockPromise = audio.play();
+    if (!unlockPromise || typeof unlockPromise.then !== 'function') {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = previousMuted;
+      audioPrimedRef.current = true;
+      return;
+    }
+
+    unlockPromise
+      .then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = previousMuted;
+        audioPrimedRef.current = true;
+      })
+      .catch(() => {
+        audio.muted = previousMuted;
+      });
   }, []);
 
   const playNotificationSound = useCallback(() => {
@@ -294,6 +327,8 @@ export default function AlatMasukPage() {
   };
 
   const handleSubmit = async (forceDuplicate = false) => {
+    primeNotificationSound();
+
     if (isSubmitting) return;
     if (!formData.noOrder || !formData.namaAlat || !formData.jenisLayanan) return;
 
@@ -532,6 +567,7 @@ export default function AlatMasukPage() {
             <button
               className="btn-primary"
               onClick={() => {
+                primeNotificationSound();
                 void handleSubmit();
               }}
               id="btn-simpan-masuk"
