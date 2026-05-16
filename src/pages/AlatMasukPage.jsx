@@ -52,6 +52,7 @@ export default function AlatMasukPage() {
   const fileInputRef = useRef(null);
   const notificationAudioRef = useRef(null);
   const audioPrimedRef = useRef(false);
+  const audioPrimePromiseRef = useRef(null);
   const [file, setFile] = useState(null);
   const [existingDocumentName, setExistingDocumentName] = useState('');
   const [fileError, setFileError] = useState('');
@@ -77,6 +78,7 @@ export default function AlatMasukPage() {
     audio.preload = 'auto';
     notificationAudioRef.current = audio;
     audioPrimedRef.current = false;
+    audioPrimePromiseRef.current = null;
 
     return () => {
       if (notificationAudioRef.current) {
@@ -84,14 +86,16 @@ export default function AlatMasukPage() {
         notificationAudioRef.current = null;
       }
       audioPrimedRef.current = false;
+      audioPrimePromiseRef.current = null;
     };
   }, []);
 
   const primeNotificationSound = useCallback(() => {
-    if (audioPrimedRef.current) return;
+    if (audioPrimedRef.current) return Promise.resolve();
+    if (audioPrimePromiseRef.current) return audioPrimePromiseRef.current;
 
     const audio = notificationAudioRef.current;
-    if (!audio) return;
+    if (!audio) return Promise.resolve();
 
     const previousMuted = audio.muted;
     audio.muted = true;
@@ -102,10 +106,10 @@ export default function AlatMasukPage() {
       audio.currentTime = 0;
       audio.muted = previousMuted;
       audioPrimedRef.current = true;
-      return;
+      return Promise.resolve();
     }
 
-    unlockPromise
+    audioPrimePromiseRef.current = unlockPromise
       .then(() => {
         audio.pause();
         audio.currentTime = 0;
@@ -114,11 +118,17 @@ export default function AlatMasukPage() {
       })
       .catch(() => {
         audio.muted = previousMuted;
+      })
+      .finally(() => {
+        audioPrimePromiseRef.current = null;
       });
+
+    return audioPrimePromiseRef.current;
   }, []);
 
   const playNotificationSound = useCallback(() => {
     const audio = notificationAudioRef.current || new Audio('/notifku.wav');
+    audio.muted = false;
     audio.currentTime = 0;
     audio.play().catch((err) => {
       console.error('Gagal memainkan notifikasi .wav, mencoba fallback .mp3', err);
@@ -198,8 +208,8 @@ export default function AlatMasukPage() {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
-    if (selectedFile.size > 1 * 1024 * 1024) {
-      setFileError('Ukuran file melebihi 1MB!');
+    if (selectedFile.size > 2 * 1024 * 1024) {
+      setFileError('Ukuran file melebihi 2MB!');
       setFile(null);
       return;
     }
@@ -213,8 +223,8 @@ export default function AlatMasukPage() {
     e.currentTarget.classList.remove('dragover');
     const droppedFile = e.dataTransfer.files?.[0];
     if (!droppedFile) return;
-    if (droppedFile.size > 1 * 1024 * 1024) {
-      setFileError('Ukuran file melebihi 1MB!');
+    if (droppedFile.size > 2 * 1024 * 1024) {
+      setFileError('Ukuran file melebihi 2MB!');
       setFile(null);
       return;
     }
@@ -327,7 +337,7 @@ export default function AlatMasukPage() {
   };
 
   const handleSubmit = async (forceDuplicate = false) => {
-    primeNotificationSound();
+    await primeNotificationSound();
 
     if (isSubmitting) return;
     if (!formData.noOrder || !formData.namaAlat || !formData.jenisLayanan) return;
@@ -567,7 +577,6 @@ export default function AlatMasukPage() {
             <button
               className="btn-primary"
               onClick={() => {
-                primeNotificationSound();
                 void handleSubmit();
               }}
               id="btn-simpan-masuk"
@@ -675,7 +684,7 @@ export default function AlatMasukPage() {
           </div>
 
           <div className="form-group md:col-span-2 col-span-2">
-            <label className="form-label">Dokumen Pendukung (Maks. 1MB)</label>
+            <label className="form-label">Dokumen Pendukung (Maks. 2MB)</label>
             <div
               className="file-upload-zone"
               onDragOver={(e) => {
@@ -692,7 +701,7 @@ export default function AlatMasukPage() {
               <div className="file-upload-text">
                 <strong>Klik untuk pilih file</strong> atau seret ke sini
               </div>
-              <div className="file-upload-hint">PDF, JPG, PNG - Maksimal 1MB</div>
+              <div className="file-upload-hint">PDF, JPG, PNG - Maksimal 2MB</div>
             </div>
             <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={handleFileChange} />
             {fileError && <div className="form-error">{fileError}</div>}
