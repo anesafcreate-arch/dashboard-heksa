@@ -320,6 +320,29 @@
     min-width: 220px;
     max-width: calc(100vw - 64px);
   }
+
+  .alat-masuk-table-scroll .data-table {
+    min-width: 1180px;
+  }
+
+  .status-alat-table-scroll .data-table {
+    min-width: 980px;
+  }
+
+  .status-select-wrap {
+    width: 148px;
+  }
+}
+
+@media (max-width: 480px) {
+  .service-filter-dropdown {
+    min-width: 180px;
+    max-width: calc(100vw - 24px);
+  }
+
+  .status-select-wrap {
+    width: 136px;
+  }
 }
 
 @media (min-width: 768px) {

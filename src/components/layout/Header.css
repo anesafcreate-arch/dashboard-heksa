@@ -4,7 +4,7 @@
   top: 0;
   left: var(--sidebar-width);
   right: 0;
-  height: var(--header-height);
+  height: calc(var(--header-height) + env(safe-area-inset-top));
   background: rgba(2, 8, 23, 0.75);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -12,7 +12,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 max(var(--space-xl), env(safe-area-inset-right)) 0 max(var(--space-xl), env(safe-area-inset-left));
+  padding: env(safe-area-inset-top) max(var(--space-xl), env(safe-area-inset-right)) 0 max(var(--space-xl), env(safe-area-inset-left));
   z-index: var(--z-header);
   transition: left var(--transition-normal);
 }
@@ -374,7 +374,7 @@
 @media (max-width: 768px) {
   .header {
     left: 0;
-    padding: 0 max(var(--space-md), env(safe-area-inset-right)) 0 max(var(--space-md), env(safe-area-inset-left));
+    padding: env(safe-area-inset-top) max(var(--space-md), env(safe-area-inset-right)) 0 max(var(--space-md), env(safe-area-inset-left));
   }
 
   .header-hamburger {
@@ -390,8 +390,10 @@
   }
 
   .notification-dropdown {
-    width: calc(100vw - 32px);
-    right: -60px;
+    width: min(360px, calc(100vw - 16px));
+    max-height: min(70dvh, 420px);
+    right: 0;
+    left: auto;
   }
 
   .profile-trigger-name {
@@ -399,7 +401,18 @@
   }
 
   .profile-dropdown {
-    width: calc(100vw - 32px);
-    right: -40px;
+    width: min(320px, calc(100vw - 16px));
+    right: 0;
+    left: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-right {
+    gap: var(--space-sm);
+  }
+
+  .profile-trigger {
+    padding-right: 8px;
   }
 }

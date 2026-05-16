@@ -113,6 +113,36 @@
     padding-left: var(--space-lg);
     padding-right: var(--space-lg);
   }
+
+  .modal-footer {
+    padding-bottom: max(var(--space-lg), env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 480px) {
+  .modal {
+    max-width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
+
+  .modal-footer {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .modal-footer > .btn-secondary,
+  .modal-footer > .btn-primary,
+  .modal-footer > .btn-danger {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
 }
 
 /* Form Elements */

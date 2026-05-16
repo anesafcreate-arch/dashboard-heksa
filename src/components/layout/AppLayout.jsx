@@ -22,7 +22,7 @@ export default function AppLayout() {
   }, []);
 
   useEffect(() => {
-    audioRef.current = new Audio('/notifku.mp3');
+    audioRef.current = new Audio('/notifku.wav');
     audioRef.current.preload = 'auto';
 
     const unlockAudio = () => {
@@ -74,7 +74,7 @@ export default function AppLayout() {
           Alat masuk baru: {payload.namaAlat || '-'} ({payload.noOrder || '-'})
         </div>
       );
-      const realtimeAudio = new Audio('/notifku.mp3');
+      const realtimeAudio = new Audio('/notifku.wav');
       realtimeAudio.play().catch((err) => {
         const fallbackAudio = audioRef.current;
         if (!fallbackAudio) {
@@ -96,6 +96,21 @@ export default function AppLayout() {
 
     return () => supabase.removeChannel(channel);
   }, [addNotification]);
+
+  useEffect(() => {
+    if (window.innerWidth > 768) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    if (isSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = previousOverflow || '';
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isSidebarOpen]);
 
   return (
     <div className="app-layout">

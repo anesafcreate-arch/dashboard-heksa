@@ -5,7 +5,7 @@
 
 .app-layout-content {
   margin-left: var(--sidebar-width);
-  padding-top: var(--header-height);
+  padding-top: calc(var(--header-height) + env(safe-area-inset-top));
   min-height: 100dvh;
   transition: margin-left var(--transition-normal);
 }
@@ -25,5 +25,12 @@
   .app-layout-main {
     padding: max(var(--space-md), env(safe-area-inset-top)) max(var(--space-md), env(safe-area-inset-right))
       max(var(--space-md), env(safe-area-inset-bottom)) max(var(--space-md), env(safe-area-inset-left));
+  }
+}
+
+@media (max-width: 480px) {
+  .app-layout-main {
+    padding: max(var(--space-sm), env(safe-area-inset-top)) max(var(--space-sm), env(safe-area-inset-right))
+      max(var(--space-sm), env(safe-area-inset-bottom)) max(var(--space-sm), env(safe-area-inset-left));
   }
 }

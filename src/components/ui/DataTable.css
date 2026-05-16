@@ -63,6 +63,8 @@
 /* Table */
 .data-table-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
   --table-scroll-size: 4px;
   --table-scroll-track: rgba(15, 23, 42, 0.35);
   --table-scroll-thumb: rgba(59, 130, 246, 0.42);
@@ -422,5 +424,17 @@
   .data-table th,
   .data-table td {
     padding: 10px var(--space-md);
+  }
+
+  .data-table-scroll {
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 480px) {
+  .data-table th,
+  .data-table td {
+    padding: 9px var(--space-sm);
+    font-size: 0.8rem;
   }
 }
