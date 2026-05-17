@@ -436,24 +436,14 @@ export function DataProvider({ children }) {
       const alatTable = await resolveAlatTable();
       const normalizedStatus = normalizeStatusKalibrasi(status);
       const today = new Date().toISOString().split('T')[0];
-      const currentRow = rows.find((row) => Number(row.id) === Number(id));
-      const existingTanggalSelesai = currentRow?.tanggal_selesai || currentRow?.tanggalSelesai || null;
-      const existingTanggalAmbil =
-        currentRow?.tanggal_diambil || currentRow?.tanggal_ambil || currentRow?.tanggalDiambil || null;
-      const tanggalSelesai = normalizedStatus === 'SELESAI' ? existingTanggalSelesai || today : existingTanggalSelesai;
-      const tanggalAmbil = normalizedStatus === 'DIAMBIL' ? existingTanggalAmbil || today : existingTanggalAmbil;
+      const tanggalSelesai = normalizedStatus === 'SELESAI' ? today : null;
+      const tanggalAmbil = normalizedStatus === 'DIAMBIL' ? today : null;
       const statusPayload = {
         status_kalibrasi: normalizedStatus,
+        tanggal_selesai: tanggalSelesai,
+        tanggal_ambil: tanggalAmbil,
+        tanggal_diambil: tanggalAmbil,
       };
-
-      if (normalizedStatus === 'SELESAI' || existingTanggalSelesai) {
-        statusPayload.tanggal_selesai = tanggalSelesai;
-      }
-
-      if (normalizedStatus === 'DIAMBIL' || existingTanggalAmbil) {
-        statusPayload.tanggal_ambil = tanggalAmbil;
-        statusPayload.tanggal_diambil = tanggalAmbil;
-      }
 
       const primary = await runMutationWithColumnFallback(
         (payload) => supabase.from(alatTable).update(payload).eq('id', id),
@@ -483,7 +473,7 @@ export function DataProvider({ children }) {
       console.error('Supabase Error:', error);
       throw error;
     }
-  }, [loadRows, resolveAlatTable, rows]);
+  }, [loadRows, resolveAlatTable]);
 
   const updateRemarks = useCallback(async (id, remarksValue) => {
     try {
@@ -492,19 +482,7 @@ export function DataProvider({ children }) {
         .from(alatTable)
         .update({ remarks: remarksValue || null })
         .eq('id', id);
-
-      if (error) {
-        console.error('Supabase Error:', error);
-        const fallback = await supabase
-          .from(alatTable)
-          .update({ pesanan_khusus: remarksValue || null })
-          .eq('id', id);
-
-        if (fallback.error) {
-          console.error('Supabase Error:', fallback.error);
-          throw fallback.error;
-        }
-      }
+      if (error) throw error;
 
       setRows((prev) =>
         prev.map((row) =>
@@ -512,7 +490,6 @@ export function DataProvider({ children }) {
             ? {
                 ...row,
                 remarks: remarksValue || '',
-                pesanan_khusus: row.remarks === undefined ? remarksValue || '' : row.pesanan_khusus,
               }
             : row
         )

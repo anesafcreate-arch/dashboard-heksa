@@ -175,11 +175,7 @@ export default function SummaryKalibrasiPage() {
       key: 'remarks',
       header: 'Remarks',
       width: '320px',
-      render: (row) => (
-        <div style={{ minWidth: '250px', whiteSpace: 'normal', lineHeight: '1.5' }}>
-          {row.remarks || row.pesananKhusus || '-'}
-        </div>
-      ),
+      render: (row) => row.remarks || '-',
     },
   ];
 

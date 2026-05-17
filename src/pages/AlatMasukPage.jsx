@@ -507,7 +507,7 @@ export default function AlatMasukPage() {
       key: 'pesananKhusus',
       header: 'Pesanan Khusus',
       width: '160px',
-      render: (row) => row.pesanan_khusus || row.pesananKhusus || '-',
+      render: (row) => row.pesananKhusus || row.pesanan_khusus || '-',
     },
     {
       key: 'kurangKelengkapan',
