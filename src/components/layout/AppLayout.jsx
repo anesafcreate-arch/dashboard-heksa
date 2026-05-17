@@ -12,8 +12,11 @@ export default function AppLayout() {
   const audioRef = useRef(null);
 
   useEffect(() => {
+    const isCompactViewport = () =>
+      window.matchMedia('(max-width: 1024px), (hover: none) and (pointer: coarse)').matches;
+
     const syncSidebarState = () => {
-      setIsSidebarOpen(window.innerWidth > 768);
+      setIsSidebarOpen(!isCompactViewport());
     };
 
     syncSidebarState();
@@ -98,7 +101,9 @@ export default function AppLayout() {
   }, [addNotification]);
 
   useEffect(() => {
-    if (window.innerWidth > 768) return undefined;
+    const isCompactViewport =
+      window.matchMedia('(max-width: 1024px), (hover: none) and (pointer: coarse)').matches;
+    if (!isCompactViewport) return undefined;
 
     const previousOverflow = document.body.style.overflow;
     if (isSidebarOpen) {

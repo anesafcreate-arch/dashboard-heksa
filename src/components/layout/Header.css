@@ -371,7 +371,7 @@
   color: var(--color-text-primary);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
   .header {
     left: 0;
     padding: env(safe-area-inset-top) max(var(--space-md), env(safe-area-inset-right)) 0 max(var(--space-md), env(safe-area-inset-left));

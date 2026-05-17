@@ -96,7 +96,7 @@
   z-index: 2;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
   .modal-backdrop {
     padding: 10px;
   }
@@ -114,7 +114,13 @@
     padding-right: var(--space-lg);
   }
 
+  .modal-body {
+    padding-bottom: max(var(--space-lg), env(safe-area-inset-bottom));
+  }
+
   .modal-footer {
+    position: sticky;
+    bottom: 0;
     padding-bottom: max(var(--space-lg), env(safe-area-inset-bottom));
   }
 }
@@ -142,6 +148,17 @@
   .modal-footer > .btn-danger {
     flex: 1 1 100%;
     justify-content: center;
+  }
+}
+
+@media (max-height: 520px) {
+  .modal-backdrop {
+    padding: 6px;
+  }
+
+  .modal {
+    max-height: calc(100dvh - 12px);
+    margin: 0;
   }
 }
 

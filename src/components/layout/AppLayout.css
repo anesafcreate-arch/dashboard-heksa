@@ -18,7 +18,7 @@
   overflow: visible;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
   .app-layout-content {
     margin-left: 0;
   }

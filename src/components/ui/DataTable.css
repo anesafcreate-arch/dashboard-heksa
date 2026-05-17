@@ -395,7 +395,7 @@
   font-size: 0.9rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
   .data-table-wrapper {
     border-radius: var(--radius-md);
   }

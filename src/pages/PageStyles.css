@@ -294,7 +294,7 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
   .page-header {
     align-items: stretch;
     flex-direction: column;
