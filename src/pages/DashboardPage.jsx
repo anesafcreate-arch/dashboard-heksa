@@ -38,8 +38,12 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     const masukToday = alatMasuk.filter((b) => b.tanggalMasuk === today).length;
     const keluarToday = alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL' && b.tanggalDiambil === today).length;
-    const proses = alatKeluar.filter((b) => b.statusKalibrasi === 'MENUNGGU' || b.statusKalibrasi === 'PROSES').length;
-    const selesai = alatKeluar.filter((b) => b.statusKalibrasi === 'SELESAI' || b.statusKalibrasi === 'DIAMBIL').length;
+    const proses = alatKeluar.filter(
+      (b) => b.statusKalibrasi === 'MENUNGGU' || b.statusKalibrasi === 'PROSES KALIBRASI' || b.statusKalibrasi === 'PROSES'
+    ).length;
+    const selesai = alatKeluar.filter(
+      (b) => b.statusKalibrasi === 'SELESAI KALIBRASI' || b.statusKalibrasi === 'SELESAI' || b.statusKalibrasi === 'DIAMBIL'
+    ).length;
     return { masukToday, keluarToday, proses, selesai };
   }, [alatMasuk, alatKeluar, today]);
 

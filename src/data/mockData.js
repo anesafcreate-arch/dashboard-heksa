@@ -14,9 +14,9 @@ export const JENIS_LAYANAN = [
 // Status Kalibrasi — Milestone Tracking
 export const STATUS_KALIBRASI = [
   { value: 'MENUNGGU', label: 'Menunggu', color: '#9ca3af' },
-  { value: 'PROSES', label: 'Proses', color: '#3b82f6' },
+  { value: 'PROSES KALIBRASI', label: 'Proses Kalibrasi', color: '#3b82f6' },
   { value: 'DIBATALKAN', label: 'Dibatalkan', color: '#ef4444' },
-  { value: 'SELESAI', label: 'Selesai', color: '#22c55e' },
+  { value: 'SELESAI KALIBRASI', label: 'Selesai Kalibrasi', color: '#22c55e' },
   { value: 'DIAMBIL', label: 'Diambil', color: '#14b8a6' },
 ];
 
@@ -148,7 +148,7 @@ export const INITIAL_ALAT_MASUK = [
 // Alat Keluar now uses statusKalibrasi instead of simple sudahDiambil boolean
 export const INITIAL_ALAT_KELUAR = INITIAL_ALAT_MASUK.map((item) => ({
   ...item,
-  statusKalibrasi: item.id <= 2 ? 'PROSES' : item.id <= 4 ? 'DIAMBIL' : item.id <= 6 ? 'SELESAI' : 'MENUNGGU',
+  statusKalibrasi: item.id <= 2 ? 'PROSES KALIBRASI' : item.id <= 4 ? 'DIAMBIL' : item.id <= 6 ? 'SELESAI KALIBRASI' : 'MENUNGGU',
   sudahDiambil: item.id <= 4 && item.id > 2,
   tanggalDiambil: (item.id <= 4 && item.id > 2) ? daysAgo(0) : null,
 }));

@@ -38,18 +38,24 @@ const STATUS_ALIASES = {
   MENUNGGU: 'MENUNGGU',
   menunggu: 'MENUNGGU',
   Menunggu: 'MENUNGGU',
-  PROSES: 'PROSES',
-  proses: 'PROSES',
-  Proses: 'PROSES',
+  PROSES: 'PROSES KALIBRASI',
+  proses: 'PROSES KALIBRASI',
+  Proses: 'PROSES KALIBRASI',
+  'PROSES KALIBRASI': 'PROSES KALIBRASI',
+  'proses kalibrasi': 'PROSES KALIBRASI',
+  'Proses Kalibrasi': 'PROSES KALIBRASI',
   DIBATALKAN: 'DIBATALKAN',
   dibatalkan: 'DIBATALKAN',
   Dibatalkan: 'DIBATALKAN',
   DIAMBIL: 'DIAMBIL',
   diambil: 'DIAMBIL',
   Diambil: 'DIAMBIL',
-  SELESAI: 'SELESAI',
-  selesai: 'SELESAI',
-  Selesai: 'SELESAI',
+  SELESAI: 'SELESAI KALIBRASI',
+  selesai: 'SELESAI KALIBRASI',
+  Selesai: 'SELESAI KALIBRASI',
+  'SELESAI KALIBRASI': 'SELESAI KALIBRASI',
+  'selesai kalibrasi': 'SELESAI KALIBRASI',
+  'Selesai Kalibrasi': 'SELESAI KALIBRASI',
 };
 
 const ALAT_TABLE_CANDIDATES = ['alat_kalibrasi', 'alat_masuk'];
@@ -436,7 +442,8 @@ export function DataProvider({ children }) {
       const alatTable = await resolveAlatTable();
       const normalizedStatus = normalizeStatusKalibrasi(status);
       const today = new Date().toISOString().split('T')[0];
-      const tanggalSelesai = normalizedStatus === 'SELESAI' ? today : null;
+      const isSelesaiStatus = normalizedStatus === 'SELESAI KALIBRASI' || normalizedStatus === 'SELESAI';
+      const tanggalSelesai = isSelesaiStatus ? today : null;
       const tanggalAmbil = normalizedStatus === 'DIAMBIL' ? today : null;
       const statusPayload = {
         status_kalibrasi: normalizedStatus,

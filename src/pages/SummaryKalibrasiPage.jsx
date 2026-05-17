@@ -12,10 +12,20 @@ const STATUS_STYLES = {
     background: 'rgba(245, 158, 11, 0.14)',
     border: '1px solid rgba(245, 158, 11, 0.35)',
   },
+  'PROSES KALIBRASI': {
+    color: '#93c5fd',
+    background: 'rgba(59, 130, 246, 0.16)',
+    border: '1px solid rgba(59, 130, 246, 0.34)',
+  },
   PROSES: {
     color: '#93c5fd',
     background: 'rgba(59, 130, 246, 0.16)',
     border: '1px solid rgba(59, 130, 246, 0.34)',
+  },
+  'SELESAI KALIBRASI': {
+    color: '#86efac',
+    background: 'rgba(34, 197, 94, 0.16)',
+    border: '1px solid rgba(34, 197, 94, 0.35)',
   },
   SELESAI: {
     color: '#86efac',
@@ -50,6 +60,15 @@ const normalizeStatus = (value) => {
   return raw || 'MENUNGGU';
 };
 
+const getStatusLabel = (status) => {
+  if (status === 'PROSES' || status === 'PROSES KALIBRASI') return 'Proses Kalibrasi';
+  if (status === 'SELESAI' || status === 'SELESAI KALIBRASI') return 'Selesai Kalibrasi';
+  if (status === 'MENUNGGU') return 'Menunggu';
+  if (status === 'DIBATALKAN') return 'Dibatalkan';
+  if (status === 'DIAMBIL') return 'Diambil';
+  return status;
+};
+
 const renderStatus = (row) => {
   const status = normalizeStatus(row.statusKalibrasi);
   const statusStyle = STATUS_STYLES[status] || {
@@ -73,7 +92,7 @@ const renderStatus = (row) => {
         whiteSpace: 'nowrap',
       }}
     >
-      {status}
+      {getStatusLabel(status)}
     </span>
   );
 };
