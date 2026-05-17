@@ -246,14 +246,49 @@ export default function AlatMasukPage() {
     throw lastError || new Error('Tabel data alat tidak ditemukan di Supabase.');
   }, []);
 
+  const buildStoragePath = useCallback(
+    (sourceFile) => {
+      const now = new Date();
+      const safeOrder = String(formData.noOrder || 'tanpa-order')
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, '_');
+      const safeName = String(sourceFile?.name || 'dokumen')
+        .trim()
+        .replace(/[^a-zA-Z0-9._-]/g, '_');
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(
+        now.getHours()
+      ).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+      const randomSuffix = Math.random().toString(36).slice(2, 8);
+      return `${safeOrder}/${timestamp}-${randomSuffix}-${safeName}`;
+    },
+    [formData.noOrder]
+  );
+
+  const uploadDokumenIfAny = useCallback(
+    async (selectedFile) => {
+      if (!selectedFile) return null;
+
+      const storagePath = buildStoragePath(selectedFile);
+      const { error: uploadError } = await supabase.storage.from('dokumen_alat').upload(storagePath, selectedFile, {
+        upsert: false,
+      });
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabase.storage.from('dokumen_alat').getPublicUrl(storagePath);
+      return publicData?.publicUrl || null;
+    },
+    [buildStoragePath]
+  );
+
   const executeSubmit = async () => {
     const tanggalMasuk = editingItem?.tanggalMasuk || new Date().toISOString().split('T')[0];
     const jumlahValue = formData.jumlah === '' ? null : Number(formData.jumlah);
-    const dokumenValue = file?.name || existingDocumentName || null;
 
     setIsSubmitting(true);
     try {
       const alatTable = await resolveAlatTable();
+      const uploadedDokumenUrl = await uploadDokumenIfAny(file);
+      const dokumenValue = uploadedDokumenUrl || existingDocumentName || null;
 
       if (editingItem) {
         const updatePayload = {
@@ -275,8 +310,7 @@ export default function AlatMasukPage() {
         if (error) throw error;
         if (fetchData) await fetchData();
       } else {
-        const qty = Math.max(1, Math.floor(Number(formData.jumlah) || 1));
-        const baseInsertPayload = {
+        const insertPayload = {
           no_order: formData.noOrder,
           nama_alat: formData.namaAlat,
           spesifikasi: formData.spesifikasi || null,
@@ -288,16 +322,17 @@ export default function AlatMasukPage() {
           tanggal_masuk: tanggalMasuk,
           dokumen: dokumenValue,
         };
-        const payloadArray = Array.from({ length: qty }, () => ({ ...baseInsertPayload }));
 
-        const { error } = await supabase.from(alatTable).insert(payloadArray);
+        const { error } = await supabase.from(alatTable).insert(insertPayload);
         if (error) throw error;
         if (fetchData) await fetchData();
         playNotificationSound();
 
+        const jumlahNotifikasi = jumlahValue ?? 1;
+
         addNotification(
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Package size={16} /> {qty} alat baru masuk: {formData.namaAlat} - {formData.jenisLayanan}
+            <Package size={16} /> {jumlahNotifikasi} alat baru masuk: {formData.namaAlat} - {formData.jenisLayanan}
           </div>
         );
 
@@ -315,7 +350,7 @@ export default function AlatMasukPage() {
               pesananKhusus: formData.pesananKhusus,
               kurangKelengkapan: formData.kurangKelengkapan,
               dokumen: dokumenValue,
-              dokumenNama: dokumenValue,
+              dokumenNama: file?.name || null,
               jenisLayanan: formData.jenisLayanan,
               tanggalMasuk,
             },
@@ -487,10 +522,31 @@ export default function AlatMasukPage() {
       width: '180px',
       render: (row) => {
         const doc = row.dokumen || row.dokumenNama;
+        const isUrl = /^https?:\/\//i.test(String(doc || ''));
+        let docLabel = doc;
+        if (isUrl) {
+          try {
+            docLabel = decodeURIComponent(String(doc).split('/').pop()?.split('?')[0] || 'Lihat Dokumen');
+          } catch {
+            docLabel = 'Lihat Dokumen';
+          }
+        }
         return doc ? (
-          <span className="file-link truncate max-w-[150px] inline-block" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <Paperclip size={14} /> {doc}
-          </span>
+          isUrl ? (
+          <a
+            href={doc}
+            target="_blank"
+            rel="noreferrer"
+            className="file-link truncate max-w-[150px] inline-block"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Paperclip size={14} /> {docLabel}
+          </a>
+          ) : (
+            <span className="file-link truncate max-w-[150px] inline-block" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Paperclip size={14} /> {docLabel}
+            </span>
+          )
         ) : (
           <span style={{ color: 'var(--color-text-muted)' }}>-</span>
         );
