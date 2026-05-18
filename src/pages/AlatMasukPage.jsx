@@ -22,6 +22,7 @@ const SERVICE_FILTER_OPTIONS = [
 ];
 
 const SERVICE_FORM_OPTIONS = SERVICE_FILTER_OPTIONS.filter((service) => service !== 'Semua Layanan');
+const STORAGE_BUCKET_CANDIDATES = ['dokumen_alat', 'dokumen-alat', 'dokumenalat', 'dokumen', 'documents'];
 
 export default function AlatMasukPage() {
   const { user } = useAuth();
@@ -56,6 +57,7 @@ export default function AlatMasukPage() {
   const [file, setFile] = useState(null);
   const [existingDocumentName, setExistingDocumentName] = useState('');
   const [fileError, setFileError] = useState('');
+  const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState({
     isOpen: false,
@@ -169,6 +171,10 @@ export default function AlatMasukPage() {
     setFile(null);
     setExistingDocumentName('');
     setFileError('');
+    setSubmitError('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     setEditingItem(null);
     setDuplicateWarning({
       isOpen: false,
@@ -178,6 +184,7 @@ export default function AlatMasukPage() {
 
   const openAdd = () => {
     resetForm();
+    setSubmitError('');
     setShowModal(true);
   };
 
@@ -196,6 +203,7 @@ export default function AlatMasukPage() {
     setFile(null);
     setExistingDocumentName(item.dokumen || item.dokumenNama || '');
     setFileError('');
+    setSubmitError('');
     setShowModal(true);
   };
 
@@ -211,6 +219,9 @@ export default function AlatMasukPage() {
     if (selectedFile.size > 2 * 1024 * 1024) {
       setFileError('Ukuran file melebihi 2MB!');
       setFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
     setFileError('');
@@ -226,6 +237,9 @@ export default function AlatMasukPage() {
     if (droppedFile.size > 2 * 1024 * 1024) {
       setFileError('Ukuran file melebihi 2MB!');
       setFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
     setFileError('');
@@ -266,34 +280,61 @@ export default function AlatMasukPage() {
 
   const uploadDokumenIfAny = useCallback(
     async (selectedFile) => {
-      if (!selectedFile) return null;
+      if (!selectedFile) return { publicUrl: null, warning: '' };
 
       const storagePath = buildStoragePath(selectedFile);
-      const { error: uploadError } = await supabase.storage.from('dokumen_alat').upload(storagePath, selectedFile, {
-        upsert: false,
-      });
-      if (uploadError) throw uploadError;
+      let firstNonBucketError = null;
 
-      const { data: publicData } = supabase.storage.from('dokumen_alat').getPublicUrl(storagePath);
-      return publicData?.publicUrl || null;
+      for (const bucketName of STORAGE_BUCKET_CANDIDATES) {
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, selectedFile, {
+          upsert: false,
+        });
+
+        if (uploadError) {
+          const rawMessage = `${uploadError?.message || ''} ${uploadError?.error || ''}`.toLowerCase();
+          if (rawMessage.includes('bucket') && rawMessage.includes('not found')) {
+            continue;
+          }
+          firstNonBucketError = uploadError;
+          break;
+        }
+
+        const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(storagePath);
+        return { publicUrl: publicData?.publicUrl || null, warning: '' };
+      }
+
+      if (firstNonBucketError) {
+        throw firstNonBucketError;
+      }
+
+      return {
+        publicUrl: null,
+        warning: `Dokumen "${selectedFile.name}" tidak dapat diunggah karena bucket penyimpanan belum tersedia. Data alat tetap disimpan tanpa file.`,
+      };
     },
     [buildStoragePath]
   );
 
   const executeSubmit = async () => {
     const tanggalMasuk = editingItem?.tanggalMasuk || new Date().toISOString().split('T')[0];
-    const jumlahValue = formData.jumlah === '' ? null : Number(formData.jumlah);
+    const rawJumlah = formData.jumlah === '' ? null : Number(formData.jumlah);
+    const jumlahValue = rawJumlah === null || Number.isFinite(rawJumlah) ? rawJumlah : null;
+    const normalizedNoOrder = String(formData.noOrder || '').trim();
+    const normalizedNamaAlat = String(formData.namaAlat || '').trim();
 
     setIsSubmitting(true);
+    setSubmitError('');
     try {
       const alatTable = await resolveAlatTable();
-      const uploadedDokumenUrl = await uploadDokumenIfAny(file);
-      const dokumenValue = uploadedDokumenUrl || existingDocumentName || null;
+      const uploadResult = await uploadDokumenIfAny(file);
+      const uploadedDokumenUrl = uploadResult?.publicUrl || null;
+      const uploadWarning = uploadResult?.warning || '';
+      const dokumenValue = uploadedDokumenUrl || existingDocumentName || (file?.name ? file.name : null);
 
       if (editingItem) {
         const updatePayload = {
-          no_order: formData.noOrder,
-          nama_alat: formData.namaAlat,
+          no_order: normalizedNoOrder,
+          nama_alat: normalizedNamaAlat,
           spesifikasi: formData.spesifikasi || null,
           jumlah: jumlahValue,
           lab: formData.lab || null,
@@ -311,8 +352,8 @@ export default function AlatMasukPage() {
         if (fetchData) await fetchData();
       } else {
         const insertPayload = {
-          no_order: formData.noOrder,
-          nama_alat: formData.namaAlat,
+          no_order: normalizedNoOrder,
+          nama_alat: normalizedNamaAlat,
           spesifikasi: formData.spesifikasi || null,
           jumlah: jumlahValue,
           lab: formData.lab || null,
@@ -359,9 +400,13 @@ export default function AlatMasukPage() {
           // Silent fail: UI lokal tetap jalan walau realtime gagal
         }
       }
+
+      if (uploadWarning) {
+        addNotification(uploadWarning);
+      }
     } catch (error) {
       console.error('Supabase Error:', error);
-      alert(error?.message || 'Terjadi kesalahan saat menyimpan data.');
+      setSubmitError(error?.message || 'Terjadi kesalahan saat menyimpan data.');
       return;
     } finally {
       setIsSubmitting(false);
@@ -372,10 +417,23 @@ export default function AlatMasukPage() {
   };
 
   const handleSubmit = async (forceDuplicate = false) => {
-    await primeNotificationSound();
-
     if (isSubmitting) return;
-    if (!formData.noOrder || !formData.namaAlat || !formData.jenisLayanan) return;
+    setSubmitError('');
+
+    if (!formData.noOrder?.trim() || !formData.namaAlat?.trim() || !formData.jenisLayanan) {
+      setSubmitError('No. Order, Nama Alat, dan Jenis Layanan wajib diisi.');
+      return;
+    }
+
+    if (formData.jumlah !== '') {
+      const jumlahNumber = Number(formData.jumlah);
+      if (!Number.isFinite(jumlahNumber) || jumlahNumber < 0) {
+        setSubmitError('Jumlah harus berupa angka 0 atau lebih.');
+        return;
+      }
+    }
+
+    await primeNotificationSound();
 
     const normalizedNoOrder = String(formData.noOrder || '').trim().toLowerCase();
     const isDuplicateNoOrder = alatMasuk.some((item) => {
@@ -645,6 +703,10 @@ export default function AlatMasukPage() {
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[75vh] overflow-y-auto overflow-x-hidden p-1 alat-masuk-form-grid">
+          {submitError && (
+            <div className="form-error md:col-span-2 col-span-2">{submitError}</div>
+          )}
+
           <div className="form-group">
             <label className="form-label">No. Order *</label>
             <input

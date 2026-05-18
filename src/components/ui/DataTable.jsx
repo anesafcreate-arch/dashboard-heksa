@@ -115,7 +115,7 @@ export default function DataTable({
       {filtered.length > 0 && (
         <div className="data-table-footer">
           <div className="data-table-info">
-            Menampilkan {startIdx + 1}–{Math.min(startIdx + pageSize, filtered.length)} dari {filtered.length} data
+            Menampilkan {startIdx + 1}-{Math.min(startIdx + pageSize, filtered.length)} dari {filtered.length} data
           </div>
           {totalPages > 1 && (
             <div className="pagination">
@@ -149,3 +149,4 @@ export default function DataTable({
     </div>
   );
 }
+

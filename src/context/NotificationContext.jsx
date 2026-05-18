@@ -21,13 +21,17 @@ function notificationReducer(state, action) {
         unreadCount: 0,
       };
     case 'MARK_READ':
-      return {
-        ...state,
-        notifications: state.notifications.map((n) =>
-          n.id === action.payload ? { ...n, read: true } : n
-        ),
-        unreadCount: Math.max(0, state.unreadCount - 1),
-      };
+      {
+        const target = state.notifications.find((n) => n.id === action.payload);
+        const shouldDecrement = target && !target.read;
+        return {
+          ...state,
+          notifications: state.notifications.map((n) =>
+            n.id === action.payload ? { ...n, read: true } : n
+          ),
+          unreadCount: shouldDecrement ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+        };
+      }
     default:
       return state;
   }
