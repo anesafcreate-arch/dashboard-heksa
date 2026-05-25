@@ -9,16 +9,19 @@ import './PageStyles.css';
 
 const STATUS_ONSITE = ['TERJADWAL', 'PROSES', 'SELESAI', 'BATAL'];
 const EMPTY_FORM = {
+  noOrder: '',
   tanggalOnsite: '',
   pelanggan: '',
   lokasi: '',
   teknisi: '',
+  durasiOnsite: '',
+  remarks: '',
   status: 'TERJADWAL',
 };
 
 export default function JadwalOnsitePage() {
   const { user } = useAuth();
-  const { jadwalOnsite, addJadwalOnsite, editJadwalOnsite, deleteJadwalOnsite } = useData();
+  const { alatMasuk, jadwalOnsite, addJadwalOnsite, editJadwalOnsite, deleteJadwalOnsite } = useData();
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -26,6 +29,18 @@ export default function JadwalOnsitePage() {
   const [message, setMessage] = useState(null);
 
   const canManage = canManageJadwalOnsite(user?.role);
+
+  const noOrderOptions = useMemo(() => {
+    const seen = new Set();
+    const options = [];
+    alatMasuk.forEach((item) => {
+      const value = String(item.noOrder || '').trim();
+      if (!value || seen.has(value)) return;
+      seen.add(value);
+      options.push(value);
+    });
+    return options;
+  }, [alatMasuk]);
 
   const resetForm = () => {
     setFormData(EMPTY_FORM);
@@ -41,10 +56,13 @@ export default function JadwalOnsitePage() {
   const openEdit = (item) => {
     setEditingItem(item);
     setFormData({
+      noOrder: item.noOrder || '',
       tanggalOnsite: item.tanggalOnsite || '',
       pelanggan: item.pelanggan || '',
       lokasi: item.lokasi || '',
       teknisi: item.teknisi || '',
+      durasiOnsite: item.durasiOnsite || '',
+      remarks: item.remarks || '',
       status: item.status || 'TERJADWAL',
     });
     setMessage(null);
@@ -58,8 +76,8 @@ export default function JadwalOnsitePage() {
 
   const handleSubmit = async () => {
     if (!canManage) return;
-    if (!formData.tanggalOnsite || !formData.pelanggan || !formData.lokasi || !formData.status) {
-      setMessage({ type: 'error', text: 'Tanggal, pelanggan, lokasi, dan status wajib diisi.' });
+    if (!formData.noOrder || !formData.tanggalOnsite || !formData.pelanggan || !formData.lokasi || !formData.status) {
+      setMessage({ type: 'error', text: 'No. Order, tanggal, pelanggan, lokasi, dan status wajib diisi.' });
       return;
     }
 
@@ -92,6 +110,12 @@ export default function JadwalOnsitePage() {
 
   const columns = useMemo(() => [
     {
+      header: 'No. Order',
+      accessor: 'noOrder',
+      width: '150px',
+      render: (row) => row.noOrder || '-',
+    },
+    {
       header: 'Tanggal',
       accessor: 'tanggalOnsite',
       render: (row) => formatDate(row.tanggalOnsite),
@@ -110,6 +134,22 @@ export default function JadwalOnsitePage() {
       header: 'Teknisi',
       accessor: 'teknisi',
       render: (row) => row.teknisi || '-',
+    },
+    {
+      header: 'Durasi Onsite',
+      accessor: 'durasiOnsite',
+      width: '130px',
+      render: (row) => row.durasiOnsite || '-',
+    },
+    {
+      header: 'Remarks',
+      accessor: 'remarks',
+      width: '240px',
+      render: (row) => (
+        <span style={{ display: 'inline-block', maxWidth: '230px', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+          {row.remarks || '-'}
+        </span>
+      ),
     },
     {
       header: 'Status',
@@ -159,7 +199,8 @@ export default function JadwalOnsitePage() {
       <DataTable
         columns={columns}
         data={jadwalOnsite}
-        searchPlaceholder="Cari pelanggan, lokasi, teknisi, atau status..."
+        searchPlaceholder="Cari no. order, pelanggan, lokasi, teknisi, durasi, remarks, atau status..."
+        tableScrollClassName="jadwal-onsite-table-scroll"
         emptyIcon={<CalendarDays size={32} color="var(--color-text-muted)" />}
         emptyText="Belum ada jadwal onsite"
       />
@@ -182,6 +223,23 @@ export default function JadwalOnsitePage() {
           </>
         }
       >
+        <div className="form-group">
+          <label className="form-label">No. Order *</label>
+          <input
+            className="form-input"
+            type="text"
+            list="no-order-onsite-options"
+            placeholder="Contoh: ORD-2026-013"
+            value={formData.noOrder}
+            onChange={(e) => setFormData({ ...formData, noOrder: e.target.value })}
+          />
+          <datalist id="no-order-onsite-options">
+            {noOrderOptions.map((noOrder) => (
+              <option key={noOrder} value={noOrder} />
+            ))}
+          </datalist>
+        </div>
+
         <div className="form-group">
           <label className="form-label">Tanggal *</label>
           <input
@@ -222,6 +280,28 @@ export default function JadwalOnsitePage() {
             placeholder="Ketik nama teknisi"
             value={formData.teknisi}
             onChange={(e) => setFormData({ ...formData, teknisi: e.target.value })}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Durasi Onsite</label>
+          <input
+            className="form-input"
+            type="text"
+            placeholder="Contoh: 1 Hari / 2 Hari / 3 Hari"
+            value={formData.durasiOnsite}
+            onChange={(e) => setFormData({ ...formData, durasiOnsite: e.target.value })}
+          />
+        </div>
+
+        <div className="form-group md:col-span-2 col-span-2">
+          <label className="form-label">Remarks</label>
+          <textarea
+            className="form-textarea"
+            rows={3}
+            placeholder="Tulis catatan onsite..."
+            value={formData.remarks}
+            onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
           />
         </div>
 

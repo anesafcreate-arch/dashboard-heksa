@@ -9,7 +9,25 @@ import { resolveRole } from '../utils/roles';
 import './PageStyles.css';
 
 const STATUS_META = Object.fromEntries(STATUS_KALIBRASI.map((status) => [status.value, status]));
-const getStatusMeta = (status) => STATUS_META[status] || STATUS_META.MENUNGGU;
+const STATUS_ALIASES = {
+  MENUNGGU: 'MENUNGGU',
+  'PENDING CUSTOMER': 'PENDING_CUSTOMER',
+  PENDING_CUSTOMER: 'PENDING_CUSTOMER',
+  PROSES: 'PROSES',
+  'PROSES KALIBRASI': 'PROSES',
+  SELESAI: 'SELESAI',
+  'SELESAI KALIBRASI': 'SELESAI',
+  DIAMBIL: 'DIAMBIL',
+  DIBATALKAN: 'DIBATALKAN',
+};
+
+const normalizeStatusValue = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return 'MENUNGGU';
+  return STATUS_ALIASES[raw] || STATUS_ALIASES[raw.toUpperCase()] || 'MENUNGGU';
+};
+
+const getStatusMeta = (status) => STATUS_META[normalizeStatusValue(status)] || STATUS_META.MENUNGGU;
 
 export default function AlatKeluarPage() {
   const { user } = useAuth();
@@ -69,7 +87,7 @@ export default function AlatKeluarPage() {
   const handleStatusChange = async (id, newStatus, currentStatus) => {
     if (!canEdit) return;
 
-    const normalizedCurrentStatus = String(currentStatus || 'MENUNGGU').toUpperCase();
+    const normalizedCurrentStatus = normalizeStatusValue(currentStatus);
     const normalizedNewStatus = String(newStatus || '').toUpperCase();
 
     if (normalizedNewStatus === 'DIBATALKAN') {
@@ -113,12 +131,18 @@ export default function AlatKeluarPage() {
     }
   };
 
-  const sortedAlatKeluar = useMemo(() => {
-    return [...alatKeluar].sort((a, b) => {
+  const tableRows = useMemo(() => {
+    const sorted = [...alatKeluar].sort((a, b) => {
       const timeCompare = new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       if (timeCompare !== 0) return timeCompare;
       return Number(b.id || 0) - Number(a.id || 0);
     });
+
+    return sorted.map((row) => ({
+      ...row,
+      statusKalibrasi: normalizeStatusValue(row.statusKalibrasi),
+      statusSearch: getStatusMeta(row.statusKalibrasi).label,
+    }));
   }, [alatKeluar]);
 
   const columns = [
@@ -133,32 +157,40 @@ export default function AlatKeluarPage() {
     { header: 'Tanggal Masuk', accessor: 'tanggalMasuk', width: '140px' },
     {
       header: 'Status Layanan',
+      accessor: 'statusSearch',
       width: '220px',
       render: (row) => {
-        const meta = getStatusMeta(row.statusKalibrasi);
+        const normalizedStatus = normalizeStatusValue(row.statusKalibrasi);
+        const meta = getStatusMeta(normalizedStatus);
 
         return (
           <div className="status-select-wrap" style={{ '--status-color': meta.color }}>
             <span className="status-lamp" aria-hidden="true" style={{ pointerEvents: 'none' }}></span>
-          <select
-            className="status-select status-select-with-lamp"
-            value={
-              cancelFlow.isOpen && cancelFlow.targetId === row.id
-                ? 'DIBATALKAN'
-                : String(row.statusKalibrasi || 'MENUNGGU').toUpperCase()
-            }
-            onChange={(e) => handleStatusChange(row.id, e.target.value, row.statusKalibrasi)}
-            disabled={!canEdit}
-          >
-            {STATUS_KALIBRASI.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+            <select
+              className="status-select status-select-with-lamp"
+              value={
+                cancelFlow.isOpen && cancelFlow.targetId === row.id
+                  ? 'DIBATALKAN'
+                  : normalizedStatus
+              }
+              onChange={(e) => handleStatusChange(row.id, e.target.value, row.statusKalibrasi)}
+              disabled={!canEdit}
+            >
+              {STATUS_KALIBRASI.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
           </div>
         );
       },
+    },
+    {
+      header: 'Jumlah',
+      accessor: 'jumlah',
+      width: '100px',
+      render: (row) => row.jumlah ?? '-',
     },
     {
       header: 'Kurang Kelengkapan',
@@ -192,8 +224,8 @@ export default function AlatKeluarPage() {
 
       <DataTable
         columns={columns}
-        data={sortedAlatKeluar}
-        searchPlaceholder="Cari no. order, nama, atau jenis layanan..."
+        data={tableRows}
+        searchPlaceholder="Cari no. order, nama, jenis layanan, atau status..."
         tableScrollClassName="status-alat-table-scroll"
         emptyIcon={<AlatKeluarIcon size={32} color="var(--color-text-muted)" />}
         emptyText="Belum ada data status alat"

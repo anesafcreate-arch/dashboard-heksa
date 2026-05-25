@@ -12,7 +12,7 @@ create table if not exists public.alat_kalibrasi (
   jenis_layanan text not null,
   tanggal_masuk date not null default current_date,
   status_kalibrasi text not null default 'MENUNGGU'
-    check (status_kalibrasi in ('MENUNGGU', 'PROSES', 'DIBATALKAN', 'DIAMBIL', 'SELESAI')),
+    check (status_kalibrasi in ('MENUNGGU', 'PENDING_CUSTOMER', 'PROSES', 'SELESAI', 'DIAMBIL', 'DIBATALKAN')),
   tanggal_diambil date null,
   dokumen_nama text null,
   created_by uuid null default auth.uid() references auth.users(id) on delete set null,
@@ -25,16 +25,155 @@ alter table public.alat_kalibrasi
 
 alter table public.alat_kalibrasi
   add constraint alat_kalibrasi_status_kalibrasi_check
-  check (status_kalibrasi in ('MENUNGGU', 'PROSES', 'DIBATALKAN', 'DIAMBIL', 'SELESAI'));
+  check (status_kalibrasi in ('MENUNGGU', 'PENDING_CUSTOMER', 'PROSES', 'SELESAI', 'DIAMBIL', 'DIBATALKAN'));
 
 alter table public.alat_kalibrasi
   add column if not exists no_order text,
+  add column if not exists no_sertifikat text,
   add column if not exists spesifikasi text,
   add column if not exists jumlah integer,
+  add column if not exists onsite_inlab text,
   add column if not exists lab text,
   add column if not exists pesanan_khusus text,
   add column if not exists remarks text,
+  add column if not exists dokumen_nama text,
   add column if not exists dokumen text;
+
+alter table if exists public.alat_masuk
+  add column if not exists created_by uuid null default auth.uid() references auth.users(id) on delete set null,
+  add column if not exists onsite_inlab text,
+  add column if not exists remarks text,
+  add column if not exists status_layanan text not null default 'MENUNGGU',
+  add column if not exists dokumen text,
+  add column if not exists dokumen_nama text;
+
+update public.alat_kalibrasi
+set status_kalibrasi = case
+  when upper(trim(status_kalibrasi)) in ('PROSES KALIBRASI', 'PROSES') then 'PROSES'
+  when upper(trim(status_kalibrasi)) in ('SELESAI KALIBRASI', 'SELESAI') then 'SELESAI'
+  when upper(trim(status_kalibrasi)) in ('PENDING CUSTOMER', 'PENDING_CUSTOMER') then 'PENDING_CUSTOMER'
+  when upper(trim(status_kalibrasi)) = 'DIAMBIL' then 'DIAMBIL'
+  when upper(trim(status_kalibrasi)) = 'DIBATALKAN' then 'DIBATALKAN'
+  else 'MENUNGGU'
+end
+where status_kalibrasi is not null;
+
+update public.alat_masuk
+set status_layanan = case
+  when upper(trim(status_layanan)) in ('PROSES KALIBRASI', 'PROSES') then 'PROSES'
+  when upper(trim(status_layanan)) in ('SELESAI KALIBRASI', 'SELESAI') then 'SELESAI'
+  when upper(trim(status_layanan)) in ('PENDING CUSTOMER', 'PENDING_CUSTOMER') then 'PENDING_CUSTOMER'
+  when upper(trim(status_layanan)) = 'DIAMBIL' then 'DIAMBIL'
+  when upper(trim(status_layanan)) = 'DIBATALKAN' then 'DIBATALKAN'
+  else 'MENUNGGU'
+end
+where status_layanan is not null;
+
+alter table if exists public.alat_masuk
+  drop constraint if exists alat_masuk_status_layanan_check;
+
+alter table if exists public.alat_masuk
+  add constraint alat_masuk_status_layanan_check
+  check (status_layanan in ('MENUNGGU', 'PENDING_CUSTOMER', 'PROSES', 'SELESAI', 'DIAMBIL', 'DIBATALKAN'));
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'alat_masuk'
+      and column_name = 'created_by'
+      and data_type <> 'uuid'
+  ) then
+    alter table public.alat_masuk
+      alter column created_by drop default,
+      alter column created_by type uuid using (
+        case
+          when created_by is null then null
+          when trim(created_by::text) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+            then trim(created_by::text)::uuid
+          else null
+        end
+      );
+  end if;
+end $$;
+
+alter table if exists public.alat_masuk
+  alter column created_by set default auth.uid();
+
+alter table if exists public.alat_masuk
+  drop constraint if exists alat_masuk_created_by_fkey;
+
+alter table if exists public.alat_masuk
+  add constraint alat_masuk_created_by_fkey
+  foreign key (created_by) references auth.users(id) on delete set null;
+
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on table public.alat_masuk to authenticated;
+
+alter table if exists public.alat_masuk enable row level security;
+
+do $$
+declare
+  policy_name text;
+begin
+  for policy_name in
+    select pol.polname
+    from pg_policy pol
+    join pg_class cls on cls.oid = pol.polrelid
+    join pg_namespace nsp on nsp.oid = cls.relnamespace
+    where nsp.nspname = 'public'
+      and cls.relname = 'alat_masuk'
+  loop
+    execute format('drop policy if exists %I on public.alat_masuk;', policy_name);
+  end loop;
+end $$;
+
+drop policy if exists "alat_masuk_select_own" on public.alat_masuk;
+drop policy if exists "alat_masuk_insert_own" on public.alat_masuk;
+drop policy if exists "alat_masuk_update_own" on public.alat_masuk;
+drop policy if exists "alat_masuk_delete_own" on public.alat_masuk;
+drop policy if exists "temporary_full_access" on public.alat_masuk;
+drop policy if exists "dev_full_access_alat_masuk" on public.alat_masuk;
+
+drop policy if exists "authenticated_insert_alat_masuk" on public.alat_masuk;
+drop policy if exists "authenticated_select_alat_masuk" on public.alat_masuk;
+drop policy if exists "authenticated_update_alat_masuk" on public.alat_masuk;
+drop policy if exists "authenticated_delete_alat_masuk" on public.alat_masuk;
+
+create policy "authenticated_insert_alat_masuk"
+on public.alat_masuk
+for insert
+to authenticated
+with check (auth.uid() = created_by);
+
+create policy "authenticated_select_alat_masuk"
+on public.alat_masuk
+for select
+to authenticated
+using (auth.uid() = created_by or created_by is null);
+
+create policy "authenticated_update_alat_masuk"
+on public.alat_masuk
+for update
+to authenticated
+using (auth.uid() = created_by or created_by is null)
+with check (auth.uid() = created_by);
+
+create policy "authenticated_delete_alat_masuk"
+on public.alat_masuk
+for delete
+to authenticated
+using (auth.uid() = created_by);
+
+-- ONLY FOR DEVELOPMENT (sementara)
+-- create policy "dev_full_access_alat_masuk"
+-- on public.alat_masuk
+-- for all
+-- to authenticated
+-- using (true)
+-- with check (true);
 
 update public.alat_kalibrasi
 set no_order = kode_alat
@@ -157,6 +296,11 @@ create table if not exists public.jadwal_onsite (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.jadwal_onsite
+  add column if not exists no_order text,
+  add column if not exists durasi_onsite text,
+  add column if not exists remarks text;
 
 create index if not exists idx_jadwal_onsite_tanggal
   on public.jadwal_onsite (tanggal_onsite asc);

@@ -1,33 +1,39 @@
-import { useMemo } from 'react';
-import { Database, Eye } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Database, Eye, Edit, Save } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import DataTable from '../components/ui/DataTable';
+import Modal from '../components/ui/Modal';
 import { resolveRole } from '../utils/roles';
 import './PageStyles.css';
 
 const STATUS_STYLES = {
   MENUNGGU: {
-    color: '#fbbf24',
-    background: 'rgba(245, 158, 11, 0.14)',
-    border: '1px solid rgba(245, 158, 11, 0.35)',
+    color: '#cbd5e1',
+    background: 'rgba(148, 163, 184, 0.14)',
+    border: '1px solid rgba(148, 163, 184, 0.3)',
   },
-  'PROSES KALIBRASI': {
-    color: '#93c5fd',
-    background: 'rgba(59, 130, 246, 0.16)',
-    border: '1px solid rgba(59, 130, 246, 0.34)',
+  PENDING_CUSTOMER: {
+    color: '#fcd34d',
+    background: 'rgba(245, 158, 11, 0.2)',
+    border: '1px solid rgba(245, 158, 11, 0.3)',
   },
   PROSES: {
     color: '#93c5fd',
     background: 'rgba(59, 130, 246, 0.16)',
     border: '1px solid rgba(59, 130, 246, 0.34)',
   },
-  'SELESAI KALIBRASI': {
+  'PROSES KALIBRASI': {
+    color: '#93c5fd',
+    background: 'rgba(59, 130, 246, 0.16)',
+    border: '1px solid rgba(59, 130, 246, 0.34)',
+  },
+  SELESAI: {
     color: '#86efac',
     background: 'rgba(34, 197, 94, 0.16)',
     border: '1px solid rgba(34, 197, 94, 0.35)',
   },
-  SELESAI: {
+  'SELESAI KALIBRASI': {
     color: '#86efac',
     background: 'rgba(34, 197, 94, 0.16)',
     border: '1px solid rgba(34, 197, 94, 0.35)',
@@ -56,11 +62,26 @@ const formatDate = (value) => {
 };
 
 const normalizeStatus = (value) => {
-  const raw = String(value || '').trim().toUpperCase();
-  return raw || 'MENUNGGU';
+  const raw = String(value || '').trim();
+  if (!raw) return 'MENUNGGU';
+
+  const aliases = {
+    MENUNGGU: 'MENUNGGU',
+    'PENDING CUSTOMER': 'PENDING_CUSTOMER',
+    PENDING_CUSTOMER: 'PENDING_CUSTOMER',
+    PROSES: 'PROSES',
+    'PROSES KALIBRASI': 'PROSES',
+    SELESAI: 'SELESAI',
+    'SELESAI KALIBRASI': 'SELESAI',
+    DIAMBIL: 'DIAMBIL',
+    DIBATALKAN: 'DIBATALKAN',
+  };
+
+  return aliases[raw] || aliases[raw.toUpperCase()] || 'MENUNGGU';
 };
 
 const getStatusLabel = (status) => {
+  if (status === 'PENDING_CUSTOMER') return 'Pending Customer';
   if (status === 'PROSES' || status === 'PROSES KALIBRASI') return 'Proses Kalibrasi';
   if (status === 'SELESAI' || status === 'SELESAI KALIBRASI') return 'Selesai Kalibrasi';
   if (status === 'MENUNGGU') return 'Menunggu';
@@ -99,7 +120,12 @@ const renderStatus = (row) => {
 
 export default function SummaryKalibrasiPage() {
   const { user } = useAuth();
-  const { alatMasuk: summaryData } = useData();
+  const { alatMasuk: summaryData, updateRemarks } = useData();
+  const [showRemarksModal, setShowRemarksModal] = useState(false);
+  const [remarksTarget, setRemarksTarget] = useState(null);
+  const [remarksDraft, setRemarksDraft] = useState('');
+  const [remarksError, setRemarksError] = useState('');
+  const [isSavingRemarks, setIsSavingRemarks] = useState(false);
 
   const roleName = resolveRole(user?.role, user?.email)?.toLowerCase();
   const canViewOnly =
@@ -108,12 +134,56 @@ export default function SummaryKalibrasiPage() {
     roleName === 'teknisi' ||
     roleName === 'supervisor' ||
     roleName === 'direktur';
+  const canEditRemarks =
+    roleName === 'adminutama' ||
+    roleName === 'admin' ||
+    roleName === 'teknisi' ||
+    roleName === 'supervisor' ||
+    roleName === 'direktur' ||
+    roleName === 'manager';
+
+  const openRemarksEditor = (row) => {
+    setRemarksTarget(row);
+    setRemarksDraft(row.remarks || '');
+    setRemarksError('');
+    setShowRemarksModal(true);
+  };
+
+  const closeRemarksEditor = () => {
+    setShowRemarksModal(false);
+    setRemarksTarget(null);
+    setRemarksDraft('');
+    setRemarksError('');
+    setIsSavingRemarks(false);
+  };
+
+  const saveRemarks = async () => {
+    if (!remarksTarget?.id || isSavingRemarks) return;
+    setIsSavingRemarks(true);
+    setRemarksError('');
+    try {
+      await updateRemarks(remarksTarget.id, remarksDraft.trim() || null);
+      closeRemarksEditor();
+    } catch (error) {
+      setRemarksError(error?.message || 'Gagal menyimpan remarks.');
+      setIsSavingRemarks(false);
+    }
+  };
 
   const sortedSummaryData = useMemo(() => {
-    return [...summaryData].sort((a, b) => {
+    const sorted = [...summaryData].sort((a, b) => {
       const timeCompare = new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       if (timeCompare !== 0) return timeCompare;
       return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+    return sorted.map((row) => {
+      const status = normalizeStatus(row.statusKalibrasi);
+      return {
+        ...row,
+        statusKalibrasi: status,
+        statusSearch: getStatusLabel(status),
+      };
     });
   }, [summaryData]);
 
@@ -121,8 +191,16 @@ export default function SummaryKalibrasiPage() {
     {
       key: 'noOrder',
       header: 'No. Order',
+      accessor: 'noOrder',
       width: '150px',
-      render: (row) => row.noOrder || '-',
+      render: (row) => row.noOrder || row.no_order || '-',
+    },
+    {
+      key: 'noSertifikat',
+      header: 'No. Sertifikat',
+      accessor: 'noSertifikat',
+      width: '170px',
+      render: (row) => row.noSertifikat || row.no_sertifikat || '-',
     },
     {
       key: 'namaAlat',
@@ -133,24 +211,35 @@ export default function SummaryKalibrasiPage() {
     {
       key: 'spesifikasi',
       header: 'Spesifikasi',
+      accessor: 'spesifikasi',
       width: '220px',
       render: (row) => row.spesifikasi || '-',
     },
     {
       key: 'jenisLayanan',
       header: 'Jenis Layanan',
+      accessor: 'jenisLayanan',
       width: '230px',
       render: (row) => <span className="badge info">{row.jenisLayanan || '-'}</span>,
     },
     {
+      key: 'onsiteInlab',
+      header: 'Onsite/Inlab',
+      accessor: 'onsiteInlab',
+      width: '120px',
+      render: (row) => row.onsiteInlab || row.onsite_inlab || '-',
+    },
+    {
       key: 'jumlah',
       header: 'Jumlah',
+      accessor: 'jumlah',
       width: '90px',
       render: (row) => row.jumlah ?? '-',
     },
     {
       key: 'lab',
       header: 'Lab',
+      accessor: 'lab',
       width: '130px',
       render: (row) => row.lab || '-',
     },
@@ -175,6 +264,7 @@ export default function SummaryKalibrasiPage() {
     {
       key: 'statusKalibrasi',
       header: 'Status Layanan',
+      accessor: 'statusSearch',
       width: '170px',
       render: renderStatus,
     },
@@ -193,8 +283,28 @@ export default function SummaryKalibrasiPage() {
     {
       key: 'remarks',
       header: 'Remarks',
-      width: '320px',
-      render: (row) => row.remarks || '-',
+      accessor: 'remarks',
+      width: '200px',
+      render: (row) => (
+        <span style={{ display: 'inline-block', minWidth: '320px', maxWidth: '420px', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.5 }}>
+          {row.remarks || '-'}
+        </span>
+      ),
+    },
+    {
+      key: 'aksi',
+      header: 'Aksi',
+      width: '110px',
+      render: (row) =>
+        canEditRemarks ? (
+          <div className="table-actions">
+            <button type="button" className="table-action-btn edit" title="Edit Remarks" onClick={() => openRemarksEditor(row)}>
+              <Edit size={16} />
+            </button>
+          </div>
+        ) : (
+          <span style={{ color: 'var(--color-text-muted)' }}>-</span>
+        ),
     },
   ];
 
@@ -214,11 +324,42 @@ export default function SummaryKalibrasiPage() {
       <DataTable
         columns={columns}
         data={sortedSummaryData}
-        searchPlaceholder="Cari no. order, nama alat, layanan, lab, atau status..."
+        searchPlaceholder="Cari no. order, no. sertifikat, nama alat, layanan, onsite/inlab, lab, atau status..."
         tableScrollClassName="summary-kalibrasi-table-scroll"
         emptyIcon={<Database size={32} color="var(--color-text-muted)" />}
         emptyText="Data Buku Induk masih kosong"
       />
+
+      <Modal
+        isOpen={showRemarksModal}
+        onClose={closeRemarksEditor}
+        title={(
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Edit size={20} />
+            Edit Remarks
+          </div>
+        )}
+        footer={(
+          <>
+            <button className="btn-secondary" onClick={closeRemarksEditor} disabled={isSavingRemarks}>Batal</button>
+            <button className="btn-primary" onClick={saveRemarks} disabled={isSavingRemarks} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Save size={16} /> {isSavingRemarks ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </>
+        )}
+      >
+        <div className="form-group">
+          <label className="form-label">Remarks</label>
+          <textarea
+            className="form-textarea"
+            rows={5}
+            placeholder="Tulis catatan..."
+            value={remarksDraft}
+            onChange={(event) => setRemarksDraft(event.target.value)}
+          />
+          {remarksError && <div className="form-error">{remarksError}</div>}
+        </div>
+      </Modal>
     </div>
   );
 }

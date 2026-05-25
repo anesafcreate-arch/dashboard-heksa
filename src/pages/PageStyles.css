@@ -94,7 +94,7 @@
 }
 
 .alat-masuk-table-scroll .data-table {
-  min-width: 1560px;
+  min-width: 1820px;
 }
 
 .status-alat-table-scroll {
@@ -104,6 +104,24 @@
 
 .status-alat-table-scroll .data-table {
   min-width: 1180px;
+}
+
+.summary-kalibrasi-table-scroll {
+  width: 100%;
+  max-width: 100%;
+}
+
+.summary-kalibrasi-table-scroll .data-table {
+  min-width: 1880px;
+}
+
+.jadwal-onsite-table-scroll {
+  width: 100%;
+  max-width: 100%;
+}
+
+.jadwal-onsite-table-scroll .data-table {
+  min-width: 1500px;
 }
 
 .grid {
@@ -322,11 +340,19 @@
   }
 
   .alat-masuk-table-scroll .data-table {
-    min-width: 1180px;
+    min-width: 1360px;
   }
 
   .status-alat-table-scroll .data-table {
     min-width: 980px;
+  }
+
+  .summary-kalibrasi-table-scroll .data-table {
+    min-width: 1480px;
+  }
+
+  .jadwal-onsite-table-scroll .data-table {
+    min-width: 1220px;
   }
 
   .status-select-wrap {

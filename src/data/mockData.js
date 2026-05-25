@@ -14,10 +14,11 @@ export const JENIS_LAYANAN = [
 // Status Kalibrasi — Milestone Tracking
 export const STATUS_KALIBRASI = [
   { value: 'MENUNGGU', label: 'Menunggu', color: '#9ca3af' },
-  { value: 'PROSES KALIBRASI', label: 'Proses Kalibrasi', color: '#3b82f6' },
-  { value: 'DIBATALKAN', label: 'Dibatalkan', color: '#ef4444' },
-  { value: 'SELESAI KALIBRASI', label: 'Selesai Kalibrasi', color: '#22c55e' },
+  { value: 'PENDING_CUSTOMER', label: 'Pending Customer', color: '#f59e0b' },
+  { value: 'PROSES', label: 'Proses Kalibrasi', color: '#3b82f6' },
+  { value: 'SELESAI', label: 'Selesai Kalibrasi', color: '#22c55e' },
   { value: 'DIAMBIL', label: 'Diambil', color: '#14b8a6' },
+  { value: 'DIBATALKAN', label: 'Dibatalkan', color: '#ef4444' },
 ];
 
 export const USERS = [

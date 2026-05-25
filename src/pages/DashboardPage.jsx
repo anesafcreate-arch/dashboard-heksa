@@ -36,13 +36,24 @@ export default function DashboardPage() {
   const today = new Date().toISOString().split('T')[0];
 
   const stats = useMemo(() => {
+    const normalizeStatus = (value) => {
+      const raw = String(value || '').trim().toUpperCase();
+      if (raw === 'PROSES KALIBRASI') return 'PROSES';
+      if (raw === 'SELESAI KALIBRASI') return 'SELESAI';
+      if (raw === 'PENDING CUSTOMER') return 'PENDING_CUSTOMER';
+      return raw || 'MENUNGGU';
+    };
+
     const masukToday = alatMasuk.filter((b) => b.tanggalMasuk === today).length;
-    const keluarToday = alatKeluar.filter((b) => b.statusKalibrasi === 'DIAMBIL' && b.tanggalDiambil === today).length;
+    const keluarToday = alatKeluar.filter((b) => normalizeStatus(b.statusKalibrasi) === 'DIAMBIL' && b.tanggalDiambil === today).length;
     const proses = alatKeluar.filter(
-      (b) => b.statusKalibrasi === 'MENUNGGU' || b.statusKalibrasi === 'PROSES KALIBRASI' || b.statusKalibrasi === 'PROSES'
+      (b) =>
+        normalizeStatus(b.statusKalibrasi) === 'MENUNGGU' ||
+        normalizeStatus(b.statusKalibrasi) === 'PENDING_CUSTOMER' ||
+        normalizeStatus(b.statusKalibrasi) === 'PROSES'
     ).length;
     const selesai = alatKeluar.filter(
-      (b) => b.statusKalibrasi === 'SELESAI KALIBRASI' || b.statusKalibrasi === 'SELESAI' || b.statusKalibrasi === 'DIAMBIL'
+      (b) => normalizeStatus(b.statusKalibrasi) === 'SELESAI' || normalizeStatus(b.statusKalibrasi) === 'DIAMBIL'
     ).length;
     return { masukToday, keluarToday, proses, selesai };
   }, [alatMasuk, alatKeluar, today]);

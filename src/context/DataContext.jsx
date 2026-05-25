@@ -38,27 +38,68 @@ const STATUS_ALIASES = {
   MENUNGGU: 'MENUNGGU',
   menunggu: 'MENUNGGU',
   Menunggu: 'MENUNGGU',
-  PROSES: 'PROSES KALIBRASI',
-  proses: 'PROSES KALIBRASI',
-  Proses: 'PROSES KALIBRASI',
-  'PROSES KALIBRASI': 'PROSES KALIBRASI',
-  'proses kalibrasi': 'PROSES KALIBRASI',
-  'Proses Kalibrasi': 'PROSES KALIBRASI',
+  PENDING_CUSTOMER: 'PENDING_CUSTOMER',
+  pending_customer: 'PENDING_CUSTOMER',
+  'PENDING CUSTOMER': 'PENDING_CUSTOMER',
+  'pending customer': 'PENDING_CUSTOMER',
+  'Pending Customer': 'PENDING_CUSTOMER',
+  PROSES: 'PROSES',
+  proses: 'PROSES',
+  Proses: 'PROSES',
+  'PROSES KALIBRASI': 'PROSES',
+  'proses kalibrasi': 'PROSES',
+  'Proses Kalibrasi': 'PROSES',
   DIBATALKAN: 'DIBATALKAN',
   dibatalkan: 'DIBATALKAN',
   Dibatalkan: 'DIBATALKAN',
   DIAMBIL: 'DIAMBIL',
   diambil: 'DIAMBIL',
   Diambil: 'DIAMBIL',
-  SELESAI: 'SELESAI KALIBRASI',
-  selesai: 'SELESAI KALIBRASI',
-  Selesai: 'SELESAI KALIBRASI',
-  'SELESAI KALIBRASI': 'SELESAI KALIBRASI',
-  'selesai kalibrasi': 'SELESAI KALIBRASI',
-  'Selesai Kalibrasi': 'SELESAI KALIBRASI',
+  SELESAI: 'SELESAI',
+  selesai: 'SELESAI',
+  Selesai: 'SELESAI',
+  'SELESAI KALIBRASI': 'SELESAI',
+  'selesai kalibrasi': 'SELESAI',
+  'Selesai Kalibrasi': 'SELESAI',
 };
 
-const ALAT_TABLE_CANDIDATES = ['alat_kalibrasi', 'alat_masuk'];
+const ALAT_TABLE_CANDIDATES = ['alat_masuk'];
+
+const normalizeIdentity = (value) => String(value ?? '').trim().toLowerCase();
+
+const buildUniqueOrderSignature = (row) =>
+  [
+    normalizeIdentity(row.no_order || row.noOrder || row.kode_alat || row.kodeAlat || ''),
+    normalizeIdentity(row.no_sertifikat || row.noSertifikat || ''),
+    normalizeIdentity(row.nama_alat || row.namaAlat || ''),
+    normalizeIdentity(row.spesifikasi || row.specification || ''),
+    String(row.jumlah ?? ''),
+    normalizeIdentity(row.lab || row.laboratorium || ''),
+    normalizeIdentity(row.pesanan_khusus || row.pesananKhusus || row.pesanan || ''),
+    normalizeIdentity(row.kurang_kelengkapan || ''),
+    normalizeIdentity(row.onsite_inlab || row.onsiteInlab || ''),
+    normalizeIdentity(row.durasi_onsite || row.durasiOnsite || ''),
+    normalizeIdentity(row.remarks || row.catatan || ''),
+    normalizeIdentity(normalizeJenisLayanan(row.jenis_layanan || row.jenisLayanan || '')),
+    normalizeIdentity(row.tanggal_masuk || row.tanggalMasuk || ''),
+    normalizeIdentity(row.dokumen || row.dokumen_nama || row.dokumenNama || ''),
+  ].join('|');
+
+const dedupeRowsByOrderSignature = (rows) => {
+  if (!Array.isArray(rows)) return [];
+
+  const seen = new Set();
+  const dedupedRows = [];
+
+  for (const row of rows) {
+    const signature = buildUniqueOrderSignature(row);
+    if (seen.has(signature)) continue;
+    seen.add(signature);
+    dedupedRows.push(row);
+  }
+
+  return dedupedRows;
+};
 
 const normalizeStatusKalibrasi = (value) => {
   const raw = String(value || '').trim();
@@ -138,6 +179,7 @@ const runMutationWithColumnFallback = async (mutationFactory, initialPayload, ma
 const normalizeRow = (row) => ({
   id: row.id,
   noOrder: row.no_order || row.noOrder || row.kode_alat || row.kodeAlat || '',
+  noSertifikat: row.no_sertifikat || row.noSertifikat || '',
   kodeAlat: row.kode_alat || row.kodeAlat || row.no_order || row.noOrder || '',
   namaAlat: row.nama_alat || row.namaAlat || '',
   spesifikasi: row.spesifikasi || row.specification || '',
@@ -145,12 +187,14 @@ const normalizeRow = (row) => ({
   lab: row.lab || row.laboratorium || '',
   pesananKhusus: row.pesanan_khusus || row.pesananKhusus || row.pesanan || '',
   kurangKelengkapan: row.kurang_kelengkapan || '',
+  onsiteInlab: row.onsite_inlab || row.onsiteInlab || '',
+  durasiOnsite: row.durasi_onsite || row.durasiOnsite || '',
   remarks: row.remarks || row.catatan || '',
   jenisLayanan: normalizeJenisLayanan(row.jenis_layanan || row.jenisLayanan),
   tanggalMasuk: row.tanggal_masuk || row.tanggalMasuk || null,
   dokumen: row.dokumen || row.dokumen_nama || row.dokumenNama || '',
   dokumenNama: row.dokumen_nama || row.dokumenNama || null,
-  statusKalibrasi: normalizeStatusKalibrasi(row.status_kalibrasi || row.status_layanan || row.statusKalibrasi),
+  statusKalibrasi: normalizeStatusKalibrasi(row.status_layanan || row.status_kalibrasi || row.statusKalibrasi),
   tanggalSelesai: row.tanggal_selesai || row.tanggalSelesai || null,
   tanggalDiambil: row.tanggal_diambil || row.tanggal_ambil || row.tanggalDiambil || null,
   createdAt: row.created_at || row.id,
@@ -158,10 +202,13 @@ const normalizeRow = (row) => ({
 
 const normalizeJadwalOnsite = (row) => ({
   id: row.id,
+  noOrder: row.no_order || row.noOrder || '',
   tanggalOnsite: row.tanggal_onsite || null,
   pelanggan: row.pelanggan || '',
   lokasi: row.lokasi || '',
   teknisi: row.teknisi || '',
+  durasiOnsite: row.durasi_onsite || row.durasiOnsite || '',
+  remarks: row.remarks || row.catatan || '',
   jenisLayanan: row.jenis_layanan || '',
   status: row.status || 'TERJADWAL',
   catatan: row.catatan || '',
@@ -198,7 +245,7 @@ export function DataProvider({ children }) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRows(Array.isArray(data) ? data : []);
+      setRows(dedupeRowsByOrderSignature(data));
     } catch (error) {
       console.error('Supabase Error:', error);
       setRows([]);
@@ -243,6 +290,7 @@ export function DataProvider({ children }) {
           const nextRow = {
             id: payload.id ?? `temp-${Date.now()}`,
             no_order: payload.noOrder || payload.kodeAlat || '',
+            no_sertifikat: payload.noSertifikat || '',
             kode_alat: payload.noOrder || payload.kodeAlat || '',
             nama_alat: payload.namaAlat || '',
             spesifikasi: payload.spesifikasi || '',
@@ -250,10 +298,13 @@ export function DataProvider({ children }) {
             lab: payload.lab || '',
             pesanan_khusus: payload.pesananKhusus || '',
             kurang_kelengkapan: payload.kurangKelengkapan || '',
+            onsite_inlab: payload.onsiteInlab || '',
+            durasi_onsite: payload.durasiOnsite || '',
             remarks: payload.remarks || '',
             jenis_layanan: normalizeJenisLayanan(payload.jenisLayanan),
             tanggal_masuk: payload.tanggalMasuk || new Date().toISOString().split('T')[0],
-            status_kalibrasi: payload.statusKalibrasi || 'MENUNGGU',
+            status_kalibrasi: normalizeStatusKalibrasi(payload.statusKalibrasi || payload.status_layanan || 'MENUNGGU'),
+            status_layanan: normalizeStatusKalibrasi(payload.statusKalibrasi || payload.status_layanan || 'MENUNGGU'),
             tanggal_selesai: payload.tanggalSelesai || null,
             tanggal_ambil: payload.tanggalDiambil || null,
             tanggal_diambil: payload.tanggalDiambil || null,
@@ -279,7 +330,7 @@ export function DataProvider({ children }) {
             return copy;
           }
 
-          return [nextRow, ...prev];
+          return dedupeRowsByOrderSignature([nextRow, ...prev]);
         });
       }
 
@@ -317,18 +368,24 @@ export function DataProvider({ children }) {
       rows.map((row) => ({
         id: row.id,
         noOrder: row.no_order || row.noOrder || row.kode_alat || row.kodeAlat || '',
+        noSertifikat: row.no_sertifikat || row.noSertifikat || '',
         kodeAlat: row.kode_alat || row.kodeAlat || row.no_order || row.noOrder || '',
         namaAlat: row.nama_alat || row.namaAlat || '',
+        onsiteInlab: row.onsite_inlab || row.onsiteInlab || '',
+        remarks: row.remarks || row.catatan || '',
         kategori: normalizeJenisLayanan(row.jenis_layanan || row.jenisLayanan),
-        statusKalibrasi: normalizeStatusKalibrasi(row.status_kalibrasi || row.status_layanan || row.statusKalibrasi),
+        statusKalibrasi: normalizeStatusKalibrasi(row.status_layanan || row.status_kalibrasi || row.statusKalibrasi),
       })),
     [rows]
   );
 
   const addAlatMasuk = useCallback(async (item) => {
     const alatTable = await resolveAlatTable();
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id || null;
     const fullPayload = item.supabasePayload || {
       no_order: item.noOrder || item.kodeAlat,
+      no_sertifikat: item.noSertifikat || null,
       kode_alat: item.noOrder || item.kodeAlat,
       nama_alat: item.namaAlat,
       spesifikasi: item.spesifikasi || null,
@@ -336,11 +393,13 @@ export function DataProvider({ children }) {
       lab: item.lab || null,
       pesanan_khusus: item.pesananKhusus || null,
       kurang_kelengkapan: item.kurangKelengkapan || null,
+      onsite_inlab: item.onsiteInlab || null,
       remarks: item.remarks || null,
+      created_by: item.createdBy || item.userId || currentUserId,
       jenis_layanan: normalizeJenisLayanan(item.jenisLayanan),
       tanggal_masuk: item.tanggalMasuk || new Date().toISOString().split('T')[0],
-      dokumen: item.dokumen || item.dokumenNama || null,
-      dokumen_nama: item.dokumen || item.dokumenNama || null,
+      dokumen: item.dokumen || null,
+      dokumen_nama: item.dokumenNama || null,
       status_kalibrasi: 'MENUNGGU',
     };
 
@@ -349,11 +408,14 @@ export function DataProvider({ children }) {
 
     const basePayload = item.supabaseBasePayload || {
       kode_alat: item.noOrder || item.kodeAlat,
+      no_sertifikat: item.noSertifikat || null,
       nama_alat: item.namaAlat,
       jenis_layanan: normalizeJenisLayanan(item.jenisLayanan),
       kurang_kelengkapan: item.kurangKelengkapan || null,
+      onsite_inlab: item.onsiteInlab || null,
       tanggal_masuk: item.tanggalMasuk || new Date().toISOString().split('T')[0],
-      dokumen_nama: item.dokumen || item.dokumenNama || null,
+      dokumen_nama: item.dokumenNama || null,
+      created_by: item.createdBy || item.userId || currentUserId,
       status_kalibrasi: 'MENUNGGU',
     };
 
@@ -394,6 +456,7 @@ export function DataProvider({ children }) {
     const alatTable = await resolveAlatTable();
     const fullPayload = {
       no_order: item.noOrder || item.kodeAlat,
+      no_sertifikat: item.noSertifikat || null,
       kode_alat: item.noOrder || item.kodeAlat,
       nama_alat: item.namaAlat,
       spesifikasi: item.spesifikasi || null,
@@ -401,10 +464,11 @@ export function DataProvider({ children }) {
       lab: item.lab || null,
       pesanan_khusus: item.pesananKhusus || null,
       kurang_kelengkapan: item.kurangKelengkapan || null,
+      onsite_inlab: item.onsiteInlab || null,
       remarks: item.remarks || null,
       jenis_layanan: normalizeJenisLayanan(item.jenisLayanan),
-      dokumen: item.dokumen || item.dokumenNama || null,
-      dokumen_nama: item.dokumen || item.dokumenNama || null,
+      dokumen: item.dokumen || null,
+      dokumen_nama: item.dokumenNama || null,
     };
 
     const payloadWithoutRemarks = { ...fullPayload };
@@ -412,10 +476,12 @@ export function DataProvider({ children }) {
 
     const basePayload = {
       kode_alat: item.noOrder || item.kodeAlat,
+      no_sertifikat: item.noSertifikat || null,
       nama_alat: item.namaAlat,
       jenis_layanan: normalizeJenisLayanan(item.jenisLayanan),
       kurang_kelengkapan: item.kurangKelengkapan || null,
-      dokumen_nama: item.dokumen || item.dokumenNama || null,
+      onsite_inlab: item.onsiteInlab || null,
+      dokumen_nama: item.dokumenNama || null,
     };
 
     const fullUpdate = await runMutationWithColumnFallback(
@@ -442,11 +508,12 @@ export function DataProvider({ children }) {
       const alatTable = await resolveAlatTable();
       const normalizedStatus = normalizeStatusKalibrasi(status);
       const today = new Date().toISOString().split('T')[0];
-      const isSelesaiStatus = normalizedStatus === 'SELESAI KALIBRASI' || normalizedStatus === 'SELESAI';
+      const isSelesaiStatus = normalizedStatus === 'SELESAI';
       const tanggalSelesai = isSelesaiStatus ? today : null;
       const tanggalAmbil = normalizedStatus === 'DIAMBIL' ? today : null;
       const statusPayload = {
         status_kalibrasi: normalizedStatus,
+        status_layanan: normalizedStatus,
         tanggal_selesai: tanggalSelesai,
         tanggal_ambil: tanggalAmbil,
         tanggal_diambil: tanggalAmbil,
@@ -518,7 +585,10 @@ export function DataProvider({ children }) {
     const alatTable = await resolveAlatTable();
     const payload = {
       no_order: item.noOrder || item.kodeAlat,
+      no_sertifikat: item.noSertifikat || null,
       nama_alat: item.namaAlat,
+      onsite_inlab: item.onsiteInlab || null,
+      remarks: item.remarks || null,
       jenis_layanan: normalizeJenisLayanan(item.kategori),
       tanggal_masuk: new Date().toISOString().split('T')[0],
       status_kalibrasi: 'MENUNGGU',
@@ -536,7 +606,10 @@ export function DataProvider({ children }) {
       (payload) => supabase.from(alatTable).update(payload).eq('id', item.id),
       {
         no_order: item.noOrder || item.kodeAlat,
+        no_sertifikat: item.noSertifikat || null,
         nama_alat: item.namaAlat,
+        onsite_inlab: item.onsiteInlab || null,
+        remarks: item.remarks || null,
         jenis_layanan: normalizeJenisLayanan(item.kategori),
       }
     );
@@ -550,33 +623,38 @@ export function DataProvider({ children }) {
   }, [loadRows, resolveAlatTable]);
 
   const addJadwalOnsite = useCallback(async (item) => {
-    const { data, error } = await supabase
-      .from('jadwal_onsite')
-      .insert({
+    const { data, error } = await runMutationWithColumnFallback(
+      (payload) => supabase.from('jadwal_onsite').insert(payload).select('*').single(),
+      {
+        no_order: item.noOrder || null,
         tanggal_onsite: item.tanggalOnsite,
         pelanggan: item.pelanggan,
         lokasi: item.lokasi,
         teknisi: item.teknisi || null,
+        durasi_onsite: item.durasiOnsite || null,
+        remarks: item.remarks || null,
         status: item.status || 'TERJADWAL',
-      })
-      .select('*')
-      .single();
+      }
+    );
     if (error) throw error;
     await loadJadwalOnsite();
     return data ? normalizeJadwalOnsite(data) : null;
   }, [loadJadwalOnsite]);
 
   const editJadwalOnsite = useCallback(async (item) => {
-    const { error } = await supabase
-      .from('jadwal_onsite')
-      .update({
+    const { error } = await runMutationWithColumnFallback(
+      (payload) => supabase.from('jadwal_onsite').update(payload).eq('id', item.id),
+      {
+        no_order: item.noOrder || null,
         tanggal_onsite: item.tanggalOnsite,
         pelanggan: item.pelanggan,
         lokasi: item.lokasi,
         teknisi: item.teknisi || null,
+        durasi_onsite: item.durasiOnsite || null,
+        remarks: item.remarks || null,
         status: item.status || 'TERJADWAL',
-      })
-      .eq('id', item.id);
+      }
+    );
     if (error) throw error;
     await loadJadwalOnsite();
   }, [loadJadwalOnsite]);

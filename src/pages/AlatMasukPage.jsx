@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useNotification } from '../context/NotificationContext';
@@ -22,10 +23,115 @@ const SERVICE_FILTER_OPTIONS = [
 ];
 
 const SERVICE_FORM_OPTIONS = SERVICE_FILTER_OPTIONS.filter((service) => service !== 'Semua Layanan');
-const STORAGE_BUCKET_CANDIDATES = ['dokumen_alat', 'dokumen-alat', 'dokumenalat', 'dokumen', 'documents'];
+const STORAGE_BUCKET = 'dokumen-alat';
+const ONSITE_INLAB_OPTIONS = ['Onsite', 'Inlab'];
+
+const deriveFileNameFromUrl = (urlValue) => {
+  if (!urlValue) return '';
+  try {
+    return decodeURIComponent(String(urlValue).split('/').pop()?.split('?')[0] || '');
+  } catch {
+    return '';
+  }
+};
+
+const decodePathSafe = (value) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+const extractStoragePathFromDokumen = (dokumenValue, bucketName) => {
+  const raw = String(dokumenValue || '').trim();
+  if (!raw) return '';
+
+  if (!/^https?:\/\//i.test(raw)) {
+    const normalizedRaw = raw.replace(/^\/+/, '');
+    if (!normalizedRaw) return '';
+
+    const withBucketPrefix = `${bucketName}/`;
+    if (normalizedRaw.startsWith(withBucketPrefix)) {
+      return decodePathSafe(normalizedRaw.slice(withBucketPrefix.length));
+    }
+    return decodePathSafe(normalizedRaw);
+  }
+
+  try {
+    const url = new URL(raw);
+    const normalizedPathname = decodePathSafe(url.pathname || '');
+    const match = normalizedPathname.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)$/i);
+    if (!match) return '';
+
+    const bucketFromUrl = decodePathSafe(match[1] || '');
+    if (bucketFromUrl !== bucketName) return '';
+
+    return decodePathSafe(match[2] || '').replace(/^\/+/, '');
+  } catch {
+    return '';
+  }
+};
+
+const getMissingColumn = (error) => {
+  const message = `${error?.message || ''} ${error?.details || ''}`;
+  const patterns = [
+    /Could not find the '([^']+)' column/i,
+    /column "([^"]+)" of relation/i,
+    /column "([^"]+)" does not exist/i,
+    /column\s+([\w.]+)\s+does not exist/i,
+    /column '([^']+)'/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = message.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return null;
+};
+
+const preparePayloadForMissingColumn = (payload, missingColumn) => {
+  if (!missingColumn) return null;
+  const normalizedMissingColumn = String(missingColumn).split('.').pop();
+
+  if (Object.prototype.hasOwnProperty.call(payload, normalizedMissingColumn)) {
+    const next = { ...payload };
+    delete next[normalizedMissingColumn];
+    return next;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(payload, missingColumn)) {
+    const next = { ...payload };
+    delete next[missingColumn];
+    return next;
+  }
+
+  return null;
+};
+
+const runMutationWithColumnFallback = async (mutationFactory, initialPayload, maxAttempts = 12) => {
+  let payload = { ...initialPayload };
+  let lastError = null;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const result = await mutationFactory(payload);
+    if (!result.error) return result;
+
+    lastError = result.error;
+
+    const missingColumn = getMissingColumn(result.error);
+    const nextPayload = preparePayloadForMissingColumn(payload, missingColumn);
+    if (!nextPayload || JSON.stringify(nextPayload) === JSON.stringify(payload)) break;
+    payload = nextPayload;
+  }
+
+  return { data: null, error: lastError };
+};
 
 export default function AlatMasukPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { alatMasuk, deleteAlatMasuk, fetchData } = useData();
   const { addNotification } = useNotification();
 
@@ -40,9 +146,11 @@ export default function AlatMasukPage() {
 
   const [formData, setFormData] = useState({
     noOrder: '',
+    noSertifikat: '',
     namaAlat: '',
     spesifikasi: '',
     jumlah: '',
+    onsiteInlab: '',
     lab: '',
     pesananKhusus: '',
     kurangKelengkapan: '',
@@ -55,6 +163,7 @@ export default function AlatMasukPage() {
   const audioPrimedRef = useRef(false);
   const audioPrimePromiseRef = useRef(null);
   const [file, setFile] = useState(null);
+  const [existingDocumentUrl, setExistingDocumentUrl] = useState('');
   const [existingDocumentName, setExistingDocumentName] = useState('');
   const [fileError, setFileError] = useState('');
   const [submitError, setSubmitError] = useState('');
@@ -160,15 +269,18 @@ export default function AlatMasukPage() {
   const resetForm = () => {
     setFormData({
       noOrder: '',
+      noSertifikat: '',
       namaAlat: '',
       spesifikasi: '',
       jumlah: '',
+      onsiteInlab: '',
       lab: '',
       pesananKhusus: '',
       kurangKelengkapan: '',
       jenisLayanan: '',
     });
     setFile(null);
+    setExistingDocumentUrl('');
     setExistingDocumentName('');
     setFileError('');
     setSubmitError('');
@@ -189,19 +301,25 @@ export default function AlatMasukPage() {
   };
 
   const openEdit = (item) => {
+    const currentDokumenUrl = item.dokumen || '';
+    const currentDokumenName = item.dokumenNama || deriveFileNameFromUrl(currentDokumenUrl);
+
     setEditingItem(item);
     setFormData({
       noOrder: item.noOrder || item.no_order || item.kodeAlat || '',
+      noSertifikat: item.noSertifikat || item.no_sertifikat || '',
       namaAlat: item.namaAlat || '',
       spesifikasi: item.spesifikasi || '',
       jumlah: item.jumlah ?? '',
+      onsiteInlab: item.onsiteInlab || item.onsite_inlab || '',
       lab: item.lab || '',
       pesananKhusus: item.pesananKhusus || '',
       kurangKelengkapan: item.kurangKelengkapan || '',
       jenisLayanan: item.jenisLayanan || '',
     });
     setFile(null);
-    setExistingDocumentName(item.dokumen || item.dokumenNama || '');
+    setExistingDocumentUrl(currentDokumenUrl);
+    setExistingDocumentName(currentDokumenName);
     setFileError('');
     setSubmitError('');
     setShowModal(true);
@@ -226,6 +344,7 @@ export default function AlatMasukPage() {
     }
     setFileError('');
     setFile(selectedFile);
+    setExistingDocumentUrl('');
     setExistingDocumentName('');
   };
 
@@ -244,20 +363,15 @@ export default function AlatMasukPage() {
     }
     setFileError('');
     setFile(droppedFile);
+    setExistingDocumentUrl('');
     setExistingDocumentName('');
   };
 
   const resolveAlatTable = useCallback(async () => {
-    const candidates = ['alat_kalibrasi', 'alat_masuk'];
-    let lastError = null;
-
-    for (const table of candidates) {
-      const { error } = await supabase.from(table).select('id').limit(1);
-      if (!error) return table;
-      lastError = error;
-    }
-
-    throw lastError || new Error('Tabel data alat tidak ditemukan di Supabase.');
+    const table = 'alat_masuk';
+    const { error } = await supabase.from(table).select('id').limit(1);
+    if (error) throw error;
+    return table;
   }, []);
 
   const buildStoragePath = useCallback(
@@ -278,48 +392,55 @@ export default function AlatMasukPage() {
     [formData.noOrder]
   );
 
+  const resolveDokumenUrl = useCallback((rawValue) => {
+    const raw = String(rawValue || '').trim();
+    if (!raw) return '';
+    if (/^https?:\/\//i.test(raw)) return raw;
+
+    const normalizedPath = raw.replace(/^\/+/, '');
+    if (!normalizedPath) return '';
+    if (/^(dashboard|alat-masuk|status-alat|summary-kalibrasi|jadwal-onsite)(\/|$)/i.test(normalizedPath)) {
+      return '';
+    }
+
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(normalizedPath);
+    return data?.publicUrl || '';
+  }, []);
+
   const uploadDokumenIfAny = useCallback(
     async (selectedFile) => {
-      if (!selectedFile) return { publicUrl: null, warning: '' };
+      if (!selectedFile) return { publicUrl: null, fileName: null };
 
       const storagePath = buildStoragePath(selectedFile);
-      let firstNonBucketError = null;
-
-      for (const bucketName of STORAGE_BUCKET_CANDIDATES) {
-        const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, selectedFile, {
-          upsert: false,
-        });
-
-        if (uploadError) {
-          const rawMessage = `${uploadError?.message || ''} ${uploadError?.error || ''}`.toLowerCase();
-          if (rawMessage.includes('bucket') && rawMessage.includes('not found')) {
-            continue;
-          }
-          firstNonBucketError = uploadError;
-          break;
+      const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(storagePath, selectedFile, {
+        upsert: false,
+      });
+      if (uploadError) {
+        const rawMessage = `${uploadError?.message || ''} ${uploadError?.error || ''}`.toLowerCase();
+        if (rawMessage.includes('bucket') && rawMessage.includes('not found')) {
+          throw new Error('Bucket dokumen-alat belum dibuat di Supabase Storage');
         }
-
-        const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(storagePath);
-        return { publicUrl: publicData?.publicUrl || null, warning: '' };
+        throw uploadError;
       }
 
-      if (firstNonBucketError) {
-        throw firstNonBucketError;
-      }
-
+      const { data: publicData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
       return {
-        publicUrl: null,
-        warning: `Dokumen "${selectedFile.name}" tidak dapat diunggah karena bucket penyimpanan belum tersedia. Data alat tetap disimpan tanpa file.`,
+        publicUrl: publicData?.publicUrl || null,
+        fileName: selectedFile.name,
       };
     },
     [buildStoragePath]
   );
 
-  const executeSubmit = async () => {
+  const executeSubmit = async (authUserId) => {
+    if (!authUserId) {
+      throw new Error('Session login tidak valid. Silakan login ulang lalu coba simpan lagi.');
+    }
+
     const tanggalMasuk = editingItem?.tanggalMasuk || new Date().toISOString().split('T')[0];
-    const rawJumlah = formData.jumlah === '' ? null : Number(formData.jumlah);
-    const jumlahValue = rawJumlah === null || Number.isFinite(rawJumlah) ? rawJumlah : null;
+    const jumlahValue = formData.jumlah === '' ? null : Number.parseInt(formData.jumlah, 10);
     const normalizedNoOrder = String(formData.noOrder || '').trim();
+    const normalizedNoSertifikat = String(formData.noSertifikat || '').trim();
     const normalizedNamaAlat = String(formData.namaAlat || '').trim();
 
     setIsSubmitting(true);
@@ -328,43 +449,76 @@ export default function AlatMasukPage() {
       const alatTable = await resolveAlatTable();
       const uploadResult = await uploadDokumenIfAny(file);
       const uploadedDokumenUrl = uploadResult?.publicUrl || null;
-      const uploadWarning = uploadResult?.warning || '';
-      const dokumenValue = uploadedDokumenUrl || existingDocumentName || (file?.name ? file.name : null);
+      const uploadedDokumenName = uploadResult?.fileName || null;
+      const uploadedDokumenPath = extractStoragePathFromDokumen(uploadedDokumenUrl, STORAGE_BUCKET);
+      const oldDokumenPath = extractStoragePathFromDokumen(editingItem?.dokumen || '', STORAGE_BUCKET);
+      const normalizedExistingDokumenUrl = resolveDokumenUrl(existingDocumentUrl);
+      const dokumenValue = uploadedDokumenUrl || normalizedExistingDokumenUrl || null;
+      const dokumenNamaValue = uploadedDokumenName || existingDocumentName || null;
 
       if (editingItem) {
         const updatePayload = {
           no_order: normalizedNoOrder,
+          no_sertifikat: normalizedNoSertifikat || null,
           nama_alat: normalizedNamaAlat,
           spesifikasi: formData.spesifikasi || null,
           jumlah: jumlahValue,
+          onsite_inlab: formData.onsiteInlab || null,
           lab: formData.lab || null,
           pesanan_khusus: formData.pesananKhusus || null,
           kurang_kelengkapan: formData.kurangKelengkapan || null,
           jenis_layanan: formData.jenisLayanan,
+          created_by: authUserId,
           dokumen: dokumenValue,
+          dokumen_nama: dokumenNamaValue,
         };
 
-        const { error } = await supabase
-          .from(alatTable)
-          .update(updatePayload)
-          .eq('id', editingItem.id);
+        const { error } = await runMutationWithColumnFallback(
+          (payload) => supabase.from(alatTable).update(payload).eq('id', editingItem.id),
+          updatePayload
+        );
         if (error) throw error;
+
+        if (uploadedDokumenUrl && oldDokumenPath && oldDokumenPath !== uploadedDokumenPath) {
+          const { error: removeError } = await supabase.storage.from(STORAGE_BUCKET).remove([oldDokumenPath]);
+          if (removeError) {
+            const removeMessage = `${removeError?.message || ''} ${removeError?.error || ''}`.toLowerCase();
+            const isNotFound =
+              removeMessage.includes('not found') ||
+              removeMessage.includes('does not exist') ||
+              removeMessage.includes('no such file');
+
+            if (!isNotFound) {
+              console.warn('[AlatMasuk] Gagal menghapus dokumen lama:', removeError);
+            }
+          }
+        }
+
         if (fetchData) await fetchData();
       } else {
         const insertPayload = {
           no_order: normalizedNoOrder,
+          no_sertifikat: normalizedNoSertifikat || null,
           nama_alat: normalizedNamaAlat,
           spesifikasi: formData.spesifikasi || null,
           jumlah: jumlahValue,
+          onsite_inlab: formData.onsiteInlab || null,
           lab: formData.lab || null,
           pesanan_khusus: formData.pesananKhusus || null,
           kurang_kelengkapan: formData.kurangKelengkapan || null,
           jenis_layanan: formData.jenisLayanan,
           tanggal_masuk: tanggalMasuk,
+          created_by: authUserId,
           dokumen: dokumenValue,
+          dokumen_nama: dokumenNamaValue,
         };
+        console.log('[AlatMasuk] user.id sebelum insert:', authUserId);
+        console.log('[AlatMasuk] payload insert created_by:', insertPayload.created_by);
 
-        const { error } = await supabase.from(alatTable).insert(insertPayload);
+        const { error } = await runMutationWithColumnFallback(
+          (payload) => supabase.from(alatTable).insert(payload),
+          insertPayload
+        );
         if (error) throw error;
         if (fetchData) await fetchData();
         playNotificationSound();
@@ -382,16 +536,18 @@ export default function AlatMasukPage() {
             type: 'broadcast',
             event: 'alat_masuk',
             payload: {
-              senderId: user?.id,
+              senderId: authUserId,
               noOrder: formData.noOrder,
+              noSertifikat: formData.noSertifikat,
               namaAlat: formData.namaAlat,
               spesifikasi: formData.spesifikasi,
               jumlah: jumlahValue,
+              onsiteInlab: formData.onsiteInlab,
               lab: formData.lab,
               pesananKhusus: formData.pesananKhusus,
               kurangKelengkapan: formData.kurangKelengkapan,
               dokumen: dokumenValue,
-              dokumenNama: file?.name || null,
+              dokumenNama: dokumenNamaValue,
               jenisLayanan: formData.jenisLayanan,
               tanggalMasuk,
             },
@@ -401,12 +557,17 @@ export default function AlatMasukPage() {
         }
       }
 
-      if (uploadWarning) {
-        addNotification(uploadWarning);
-      }
     } catch (error) {
       console.error('Supabase Error:', error);
-      setSubmitError(error?.message || 'Terjadi kesalahan saat menyimpan data.');
+      const message = error?.message || 'Terjadi kesalahan saat menyimpan data.';
+      if (message.toLowerCase().includes('bucket dokumen-alat belum dibuat')) {
+        addNotification('Bucket dokumen-alat belum dibuat di Supabase Storage');
+      }
+      if (message.toLowerCase().includes('row-level security')) {
+        setSubmitError('Akses ditolak oleh RLS tabel alat_masuk. Jalankan migration policy terbaru lalu login ulang.');
+        return;
+      }
+      setSubmitError(message);
       return;
     } finally {
       setIsSubmitting(false);
@@ -419,16 +580,38 @@ export default function AlatMasukPage() {
   const handleSubmit = async (forceDuplicate = false) => {
     if (isSubmitting) return;
     setSubmitError('');
+    console.log('[AlatMasuk] user.id (context) sebelum insert:', user?.id ?? null);
 
-    if (!formData.noOrder?.trim() || !formData.namaAlat?.trim() || !formData.jenisLayanan) {
-      setSubmitError('No. Order, Nama Alat, dan Jenis Layanan wajib diisi.');
+    if (!user?.id) {
+      setSubmitError('Session login tidak ditemukan. Anda akan diarahkan ke halaman login.');
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      setSubmitError(authError.message || 'Session login tidak valid. Silakan login ulang.');
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    const authUserId = authData?.user?.id || null;
+    console.log('[AlatMasuk] user.id (supabase) sebelum insert:', authUserId);
+    if (!authUserId) {
+      setSubmitError('Session login tidak valid. Silakan login ulang lalu coba simpan lagi.');
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    if (!formData.noOrder?.trim() || !formData.namaAlat?.trim() || !formData.jenisLayanan || !formData.onsiteInlab) {
+      setSubmitError('No. Order, Nama Alat, Jenis Layanan, dan Onsite/Inlab wajib diisi.');
       return;
     }
 
     if (formData.jumlah !== '') {
       const jumlahNumber = Number(formData.jumlah);
-      if (!Number.isFinite(jumlahNumber) || jumlahNumber < 0) {
-        setSubmitError('Jumlah harus berupa angka 0 atau lebih.');
+      if (!Number.isInteger(jumlahNumber) || jumlahNumber < 0) {
+        setSubmitError('Jumlah harus berupa bilangan bulat 0 atau lebih.');
         return;
       }
     }
@@ -451,7 +634,7 @@ export default function AlatMasukPage() {
       return;
     }
 
-    await executeSubmit();
+    await executeSubmit(authUserId);
   };
 
   const handleDuplicateContinue = async () => {
@@ -472,19 +655,21 @@ export default function AlatMasukPage() {
   const exportCSV = () => {
     const delimiter = ';';
     const escapeCSV = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-    const headers = ['No', 'No. Order', 'Nama Alat', 'Spesifikasi', 'Jenis Layanan', 'Jumlah', 'Lab', 'Pesanan Khusus', 'Kurang Kelengkapan', 'Tanggal Masuk', 'Dokumen'];
+    const headers = ['No', 'No. Order', 'No. Sertifikat', 'Nama Alat', 'Spesifikasi', 'Jenis Layanan', 'Onsite/Inlab', 'Jumlah', 'Lab', 'Pesanan Khusus', 'Kurang Kelengkapan', 'Tanggal Masuk', 'Dokumen URL'];
     const rows = filteredAlatMasuk.map((item, idx) => [
       idx + 1,
       item.noOrder || item.no_order || '-',
+      item.noSertifikat || item.no_sertifikat || '-',
       item.namaAlat,
       item.spesifikasi || '-',
       item.jenisLayanan,
-      item.jumlah || '-',
+      item.onsiteInlab || item.onsite_inlab || '-',
+      item.jumlah ?? '-',
       item.lab || '-',
       item.pesananKhusus || '-',
       item.kurangKelengkapan || '-',
       item.tanggalMasuk,
-      item.dokumen || item.dokumenNama || '-',
+      resolveDokumenUrl(item.dokumen) || '-',
     ]);
     const csv = `\uFEFFsep=${delimiter}\r\n${[headers, ...rows]
       .map((row) => row.map(escapeCSV).join(delimiter))
@@ -506,10 +691,18 @@ export default function AlatMasukPage() {
       width: '160px',
       render: (row) => row.no_order || row.noOrder || '-',
     },
+    {
+      key: 'noSertifikat',
+      header: 'No. Sertifikat',
+      accessor: 'noSertifikat',
+      width: '170px',
+      render: (row) => row.no_sertifikat || row.noSertifikat || '-',
+    },
     { key: 'namaAlat', header: 'Nama Alat', accessor: 'namaAlat', width: '200px' },
     {
       key: 'spesifikasi',
       header: 'Spesifikasi',
+      accessor: 'spesifikasi',
       width: '180px',
       render: (row) => row.spesifikasi || row.Spesifikasi || '-',
     },
@@ -556,20 +749,30 @@ export default function AlatMasukPage() {
       render: (row) => row.jumlah ?? row.Jumlah ?? '-',
     },
     {
+      key: 'onsiteInlab',
+      header: 'Onsite/Inlab',
+      accessor: 'onsiteInlab',
+      width: '120px',
+      render: (row) => row.onsiteInlab || row.onsite_inlab || '-',
+    },
+    {
       key: 'lab',
       header: 'Lab',
+      accessor: 'lab',
       width: '120px',
       render: (row) => row.lab || row.Lab || '-',
     },
     {
       key: 'pesananKhusus',
       header: 'Pesanan Khusus',
+      accessor: 'pesananKhusus',
       width: '160px',
       render: (row) => row.pesananKhusus || row.pesanan_khusus || '-',
     },
     {
       key: 'kurangKelengkapan',
       header: 'Kurang Kelengkapan',
+      accessor: 'kurangKelengkapan',
       width: '180px',
       render: (row) => row.kurangKelengkapan || row.kurang_kelengkapan || '-',
     },
@@ -579,32 +782,19 @@ export default function AlatMasukPage() {
       header: 'Dokumen',
       width: '180px',
       render: (row) => {
-        const doc = row.dokumen || row.dokumenNama;
-        const isUrl = /^https?:\/\//i.test(String(doc || ''));
-        let docLabel = doc;
-        if (isUrl) {
-          try {
-            docLabel = decodeURIComponent(String(doc).split('/').pop()?.split('?')[0] || 'Lihat Dokumen');
-          } catch {
-            docLabel = 'Lihat Dokumen';
-          }
-        }
-        return doc ? (
-          isUrl ? (
+        const resolvedUrl = resolveDokumenUrl(row.dokumen);
+        const docLabel = row.dokumenNama || deriveFileNameFromUrl(resolvedUrl) || 'Lihat Dokumen';
+
+        return resolvedUrl ? (
           <a
-            href={doc}
+            href={resolvedUrl}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="file-link truncate max-w-[150px] inline-block"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
           >
             <Paperclip size={14} /> {docLabel}
           </a>
-          ) : (
-            <span className="file-link truncate max-w-[150px] inline-block" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <Paperclip size={14} /> {docLabel}
-            </span>
-          )
         ) : (
           <span style={{ color: 'var(--color-text-muted)' }}>-</span>
         );
@@ -658,7 +848,7 @@ export default function AlatMasukPage() {
       <DataTable
         columns={columns}
         data={filteredAlatMasuk}
-        searchPlaceholder="Cari no. order, nama alat, atau jenis layanan..."
+        searchPlaceholder="Cari no. order, no. sertifikat, nama alat, layanan, atau onsite/inlab..."
         tableScrollClassName="alat-masuk-table-scroll"
         emptyIcon={<Package size={32} color="var(--color-text-muted)" />}
         emptyText="Belum ada alat masuk"
@@ -719,6 +909,17 @@ export default function AlatMasukPage() {
           </div>
 
           <div className="form-group">
+            <label className="form-label">No. Sertifikat</label>
+            <input
+              className="form-input"
+              type="text"
+              placeholder="Contoh: CERT-2026-001"
+              value={formData.noSertifikat}
+              onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
             <label className="form-label">Nama Alat *</label>
             <input
               className="form-input"
@@ -746,10 +947,27 @@ export default function AlatMasukPage() {
               className="form-input"
               type="number"
               min="0"
+              step="1"
               placeholder="Contoh: 5"
               value={formData.jumlah}
               onChange={(e) => setFormData({ ...formData, jumlah: e.target.value })}
             />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Onsite/Inlab *</label>
+            <select
+              className="form-select"
+              value={formData.onsiteInlab}
+              onChange={(e) => setFormData({ ...formData, onsiteInlab: e.target.value })}
+            >
+              <option value="">- Pilih Tipe Pengerjaan -</option>
+              {ONSITE_INLAB_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
@@ -823,16 +1041,17 @@ export default function AlatMasukPage() {
             </div>
             <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={handleFileChange} />
             {fileError && <div className="form-error">{fileError}</div>}
-            {(file || existingDocumentName) && (
+            {(file || existingDocumentUrl || existingDocumentName) && (
               <div className="file-upload-preview">
                 <span className="file-upload-preview-name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Paperclip size={14} /> {file?.name || existingDocumentName}
+                  <Paperclip size={14} /> {file?.name || existingDocumentName || 'Lihat Dokumen'}
                 </span>
                 <button
                   type="button"
                   className="file-upload-remove"
                   onClick={() => {
                     setFile(null);
+                    setExistingDocumentUrl('');
                     setExistingDocumentName('');
                     if (fileInputRef.current) {
                       fileInputRef.current.value = '';
