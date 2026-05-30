@@ -284,11 +284,22 @@ export default function SummaryKalibrasiPage() {
       key: 'remarks',
       header: 'Remarks',
       accessor: 'remarks',
-      width: '200px',
+      width: '180px',
       render: (row) => (
-        <span style={{ display: 'inline-block', minWidth: '320px', maxWidth: '420px', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.5 }}>
+        <div
+          style={{
+            display: 'block',
+            width: '180px',
+            minWidth: '180px',
+            maxWidth: '180px',
+            whiteSpace: 'normal',
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word',
+            lineHeight: 1.4,
+          }}
+        >
           {row.remarks || '-'}
-        </span>
+        </div>
       ),
     },
     {

@@ -70,8 +70,14 @@ export default function DataTable({
             <tr>
               <th style={{ width: '50px' }}>No</th>
               {columns.map((col) => (
-                <th key={col.header} style={col.width ? { width: col.width } : {}}>
-                  {col.header}
+                <th key={col.header}
+                style={col.width ? {
+                  width: col.width,
+                  minWidth: col.width,
+                  maxWidth: col.width
+                } : {}}
+              >
+                {col.header}
                 </th>
               ))}
             </tr>
@@ -91,7 +97,13 @@ export default function DataTable({
                 <tr key={row.id || idx}>
                   <td>{startIdx + idx + 1}</td>
                   {columns.map((col) => (
-                    <td key={col.header}>
+                    <td key={col.header}
+                    style={col.width ? {
+                      width: col.width,
+                      minWidth: col.width,
+                      maxWidth: col.width
+                    } : {}}
+                  >
                       {col.render ? col.render(row) : row[col.accessor]}
                     </td>
                   ))}
